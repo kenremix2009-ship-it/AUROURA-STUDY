@@ -14964,7 +14964,7 @@ body:not(.interbodylogin-aurora-signup) #authOverlay .aurora-auth-footer{display
    setChecked(prefix+'Enabled',cfg.enabled===true);
    setValue(prefix+'ClientId',cfg.clientId||'');
    setValue(prefix+'Origin',cfg.origin||defaultOrigin());
-   setValue(prefix+'Callback',cfg.callbackUri||'https://kho-du-lieu-de.firebaseapp.com/__/auth/handler');
+   setValue(prefix+'Callback',cfg.callbackUri||'https://aurora-study-121bc.firebaseapp.com/__/auth/handler');
    updateStatus(provider,cfg);
  }
  function updateStatus(provider,cfg,message){
@@ -15013,7 +15013,7 @@ body:not(.interbodylogin-aurora-signup) #authOverlay .aurora-auth-footer{display
  window.auroraClearOAuthProviderConfig=async function(provider){
    provider=String(provider||'').toLowerCase();if(!['google','github'].includes(provider))return;
    try{if(typeof configTabUnlocked!=='undefined'&&!configTabUnlocked){notice('Hãy mở khóa Cấu hình trước khi xóa.','error');return;}}catch(_){ }
-   const cfg={enabled:false,clientId:'',origin:defaultOrigin(),callbackUri:'https://kho-du-lieu-de.firebaseapp.com/__/auth/handler',updatedAt:Date.now()};
+   const cfg={enabled:false,clientId:'',origin:defaultOrigin(),callbackUri:'https://aurora-study-121bc.firebaseapp.com/__/auth/handler',updatedAt:Date.now()};
    try{
      if(!window.db||typeof window.ref!=='function'||typeof window.dbSet!=='function')throw new Error('Firebase chưa sẵn sàng');
      await window.dbSet(window.ref(window.db,'system/oauth_login/'+provider),cfg);
