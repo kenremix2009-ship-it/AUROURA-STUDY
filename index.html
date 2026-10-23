@@ -3441,50 +3441,17 @@ body.optimized-mode.aurora-interface-aria-blue #auroraShowcaseMediaStage:before{
     </div>
   </div>
 </div>
+
 <script type="module">
-  // Import the functions you need from the SDKs you need
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import { getAnalytics, isSupported as isAnalyticsSupported } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
-  import { getDatabase, ref, set, get, child, remove, push, onValue, update } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
-
-  // Your web app's Firebase configuration
-  const firebaseConfig = {
-    apiKey: "AIzaSyC33ENu7xxo0Z9YXz_t3J8NZkfsShuuzKM",
-    authDomain: "kho-du-lieu-de.firebaseapp.com",
-    databaseURL: "https://kho-du-lieu-de-default-rtdb.firebaseio.com",
-    projectId: "kho-du-lieu-de",
-    storageBucket: "kho-du-lieu-de.firebasestorage.app",
-    messagingSenderId: "420574558880",
-    appId: "1:420574558880:web:0ee66551d8d991e474a7c5",
-    measurementId: "G-DB5Q1BRS5S"
-  };
-
-  // Initialize Firebase & Realtime Database
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
-
-  // Gắn toàn bộ biến Database lên window để hệ thống Aurora hoạt động
-  window.firebaseApp = app;
-  window.db = db;
-  window.ref = ref;
-  window.dbRef = ref(db);
-  window.dbSet = set;
-  window.dbGet = get;
-  window.dbChild = child;
-  window.dbRemove = remove;
-  window.dbPush = push;
-  window.onValue = onValue;
-  window.dbUpdate = update;
-
-  // Initialize Analytics an toàn (không gây treo DB nếu trình duyệt chặn quảng cáo/tracking)
-  isAnalyticsSupported()
-    .then((supported) => {
-      if (supported) {
-        window.firebaseAnalytics = getAnalytics(app);
-      }
-    })
-    .catch((err) => console.warn("Analytics init skipped:", err));
+import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+import { getAnalytics, isSupported as isAnalyticsSupported } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+import { getDatabase, ref, set, get, child, remove, push, onValue, update } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
+const firebaseConfig={apiKey:"AIzaSyC33ENu7xxo0Z9YXz_t3J8NZkfsShuuzKM",authDomain:"kho-du-lieu-de.firebaseapp.com",databaseURL:"https://kho-du-lieu-de-default-rtdb.firebaseio.com",projectId:"kho-du-lieu-de",storageBucket:"kho-du-lieu-de.firebasestorage.app",messagingSenderId:"420574558880",appId:"1:420574558880:web:0ee66551d8d991e474a7c5"};
+const app=initializeApp(firebaseConfig);const db=getDatabase(app);
+  isAnalyticsSupported().then(s=>{if(s)window.firebaseAnalytics=getAnalytics(app);}).catch(()=>{});
+window.firebaseApp=app;window.db=db;window.ref=ref;window.dbRef=ref(db);window.dbSet=set;window.dbGet=get;window.dbChild=child;window.dbRemove=remove;window.dbPush=push;window.onValue=onValue;window.dbUpdate=update;
 </script>
+
 <script>
 /* ========== GLOBAL STATE ========== */
 let currentUser=null,currentUserFullData=null,currentViewingUser=null;
