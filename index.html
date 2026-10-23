@@ -3442,12 +3442,30 @@ body.optimized-mode.aurora-interface-aria-blue #auroraShowcaseMediaStage:before{
   </div>
 </div>
 
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js";
-import { getDatabase, ref, set, get, child, remove, push, onValue, update } from "https://www.gstatic.com/firebasejs/9.22.1/firebase-database.js";
-const firebaseConfig={apiKey:"AIzaSyC33ENu7xxo8Z9YXz_t3J8NZkfsShuuzKM",authDomain:"kho-du-lieu-de.firebaseapp.com",databaseURL:"https://kho-du-lieu-de-default-rtdb.firebaseio.com",projectId:"kho-du-lieu-de",storageBucket:"kho-du-lieu-de.firebasestorage.app",messagingSenderId:"420574558880",appId:"1:420574558880:web:f9c5037be3e34a6674a7c5"};
-const app=initializeApp(firebaseConfig);const db=getDatabase(app);
-window.firebaseApp=app;window.db=db;window.ref=ref;window.dbRef=ref(db);window.dbSet=set;window.dbGet=get;window.dbChild=child;window.dbRemove=remove;window.dbPush=push;window.onValue=onValue;window.dbUpdate=update;
+  // Import the functions you need from the SDKs you need
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
+  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+  // TODO: Add SDKs for Firebase products that you want to use
+  // https://firebase.google.com/docs/web/setup#available-libraries
+
+  // Your web app's Firebase configuration
+  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+  const firebaseConfig = {
+    apiKey: "AIzaSyC33ENu7xxo0Z9YXz_t3J8NZkfsShuuzKM",
+    authDomain: "kho-du-lieu-de.firebaseapp.com",
+    databaseURL: "https://kho-du-lieu-de-default-rtdb.firebaseio.com",
+    projectId: "kho-du-lieu-de",
+    storageBucket: "kho-du-lieu-de.firebasestorage.app",
+    messagingSenderId: "420574558880",
+    appId: "1:420574558880:web:543291d79c207e8574a7c5",
+    measurementId: "G-M08LGTYX0J"
+  };
+
+  // Initialize Firebase
+  const app = initializeApp(firebaseConfig);
+  const analytics = getAnalytics(app);
 </script>
 
 <script>
