@@ -3441,17 +3441,13 @@ body.optimized-mode.aurora-interface-aria-blue #auroraShowcaseMediaStage:before{
     </div>
   </div>
 </div>
-
-
 <script type="module">
   // Import the functions you need from the SDKs you need
   import { initializeApp } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js";
-  import { getAnalytics } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
-  // TODO: Add SDKs for Firebase products that you want to use
-  // https://firebase.google.com/docs/web/setup#available-libraries
+  import { getAnalytics, isSupported as isAnalyticsSupported } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-analytics.js";
+  import { getDatabase, ref, set, get, child, remove, push, onValue, update } from "https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js";
 
   // Your web app's Firebase configuration
-  // For Firebase JS SDK v7.20.0 and later, measurementId is optional
   const firebaseConfig = {
     apiKey: "AIzaSyC33ENu7xxo0Z9YXz_t3J8NZkfsShuuzKM",
     authDomain: "kho-du-lieu-de.firebaseapp.com",
@@ -3459,15 +3455,36 @@ body.optimized-mode.aurora-interface-aria-blue #auroraShowcaseMediaStage:before{
     projectId: "kho-du-lieu-de",
     storageBucket: "kho-du-lieu-de.firebasestorage.app",
     messagingSenderId: "420574558880",
-    appId: "1:420574558880:web:543291d79c207e8574a7c5",
-    measurementId: "G-M08LGTYX0J"
+    appId: "1:420574558880:web:0ee66551d8d991e474a7c5",
+    measurementId: "G-DB5Q1BRS5S"
   };
 
-  // Initialize Firebase
+  // Initialize Firebase & Realtime Database
   const app = initializeApp(firebaseConfig);
-  const analytics = getAnalytics(app);
-</script>
+  const db = getDatabase(app);
 
+  // Gắn toàn bộ biến Database lên window để hệ thống Aurora hoạt động
+  window.firebaseApp = app;
+  window.db = db;
+  window.ref = ref;
+  window.dbRef = ref(db);
+  window.dbSet = set;
+  window.dbGet = get;
+  window.dbChild = child;
+  window.dbRemove = remove;
+  window.dbPush = push;
+  window.onValue = onValue;
+  window.dbUpdate = update;
+
+  // Initialize Analytics an toàn (không gây treo DB nếu trình duyệt chặn quảng cáo/tracking)
+  isAnalyticsSupported()
+    .then((supported) => {
+      if (supported) {
+        window.firebaseAnalytics = getAnalytics(app);
+      }
+    })
+    .catch((err) => console.warn("Analytics init skipped:", err));
+</script>
 <script>
 /* ========== GLOBAL STATE ========== */
 let currentUser=null,currentUserFullData=null,currentViewingUser=null;
@@ -11750,8 +11767,8 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
     let storageMod=null;
     try{
       setShowcaseUploadProgress(status,0,'Đang khởi tạo Firebase Storage…');
-      const appMod=await import('https://www.gstatic.com/firebasejs/9.22.1/firebase-app.js');
-      storageMod=await import('https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js');
+      const appMod=await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js');
+      storageMod=await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');
       let app=window.firebaseApp||null;
       if(!app){try{app=appMod.getApp();}catch(_){throw new Error('Firebase App chưa khởi tạo. Hãy tải lại trang và thử lại.');}}
       const bucket=String(app.options&&app.options.storageBucket||'').trim();
@@ -12758,7 +12775,7 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
     const status=$('auroraChatUploadStatus_'+id);if(status)status.textContent='Đang chuẩn bị tải ảnh…';
     try{
       const app=window.firebaseApp;if(!app)throw new Error('Firebase App chưa khởi tạo.');
-      const storageMod=await import('https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js');
+      const storageMod=await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');
       const bucket=String(app.options&&app.options.storageBucket||'').trim();if(!bucket)throw new Error('Chưa cấu hình Firebase Storage bucket.');
       let storage;try{storage=storageMod.getStorage(app,bucket.startsWith('gs://')?bucket:'gs://'+bucket);}catch(_){storage=storageMod.getStorage(app);}
       const safeName=String(file.name||'image').normalize('NFKD').replace(/[^a-zA-Z0-9._-]+/g,'_').slice(-90)||'image';
@@ -12927,7 +12944,7 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
     if(button){button.disabled=true;button.dataset.oldText=button.textContent;button.textContent='Đang tải…';}
     try{
       const app=window.firebaseApp;if(!app)throw new Error('Firebase App chưa khởi tạo. Hãy chờ trang tải xong rồi thử lại.');
-      const storageMod=await import('https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js');
+      const storageMod=await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');
       const bucket=String(app.options?.storageBucket||'').trim();if(!bucket)throw new Error('Chưa cấu hình Firebase Storage bucket.');
       let storage;try{storage=storageMod.getStorage(app,bucket.startsWith('gs://')?bucket:'gs://'+bucket);}catch(_){storage=storageMod.getStorage(app);}
       const allBytes=files.reduce((sum,f)=>sum+f.size,0);let done=0;
@@ -12949,7 +12966,7 @@ import { VRMLoaderPlugin } from '@pixiv/three-vrm';
   async function deleteTrollAudio(id){
     if(!requireOperator())return;const key=String(id||'');const item=trollAudioCache[key];if(!item)return;
     const yes=typeof window.customConfirm==='function'?await window.customConfirm(`Xóa file âm thanh "${item.name||key}"?`,{icon:'🗑️',title:'Xóa audio'}):confirm(`Xóa file âm thanh "${item.name||key}"?`);if(!yes)return;
-    try{await remove(`${ROOT}/troll_audio_list/${key}`);if(item.storagePath){try{const storageMod=await import('https://www.gstatic.com/firebasejs/9.22.1/firebase-storage.js');const app=window.firebaseApp;const storage=storageMod.getStorage(app);await storageMod.deleteObject(storageMod.ref(storage,item.storagePath));}catch(e){console.warn('Metadata removed; Storage cleanup failed:',e);}}await loadTrollAudioList();toast('Đã xóa file âm thanh.','success');}catch(e){toast('Xóa audio thất bại: '+(e.message||e),'error');}
+    try{await remove(`${ROOT}/troll_audio_list/${key}`);if(item.storagePath){try{const storageMod=await import('https://www.gstatic.com/firebasejs/13.1.0/firebase-storage.js');const app=window.firebaseApp;const storage=storageMod.getStorage(app);await storageMod.deleteObject(storageMod.ref(storage,item.storagePath));}catch(e){console.warn('Metadata removed; Storage cleanup failed:',e);}}await loadTrollAudioList();toast('Đã xóa file âm thanh.','success');}catch(e){toast('Xóa audio thất bại: '+(e.message||e),'error');}
   }
 
   function init(){installStyle();applyInterfaceMode((()=>{try{return localStorage.getItem('aurora-interface-mode')||'basic';}catch(_){return 'basic';}})());applyInterBodyLoginMode(readInterBodyLoginLocal(),{source:'init'});startInterBodyLoginWatcher();startInterBodyLoginPersonalWatcher();startInterfaceModeWatcher();installNavHorizontalScroll();installHeroCollapse();mountUltraPanel();installPlanHooks();installBanAndJoinHooks();watchMaintenance();observePlanCards();
@@ -15080,7 +15097,7 @@ body:not(.interbodylogin-aurora-signup) #authOverlay .aurora-auth-footer{display
 <script id="aurora-oauth-authentication-bridge">
 (function(){
  'use strict';
- const AUTH_SDK='https://www.gstatic.com/firebasejs/9.22.1/firebase-auth.js';
+ const AUTH_SDK='https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
  let authModulePromise=null, authInstancePromise=null, signinLock=false;
  const $=id=>document.getElementById(id);
  const notify=(message,type)=>{try{if(typeof window.showToast==='function')window.showToast(message,type||'info');else alert(message);}catch(_){}};
