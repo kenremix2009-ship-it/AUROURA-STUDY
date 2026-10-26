@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+daw_full_html = """<!DOCTYPE html>
 <html lang="vi" class="dark">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FL-StemStudio | AI Audio Stem Separator & Multi-Track Mixer</title>
+  <title>FL Studio Web DAW - AI Audio Stem Separator & Multi-track Mixer</title>
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -13,19 +13,25 @@
       theme: {
         extend: {
           colors: {
-            daw: {
-              bg: '#14191d',
-              panel: '#212930',
-              header: '#29333b',
-              grid: '#1b2228',
-              border: '#34414b',
-              accent: '#ff8c00',
-              led: '#4cd964'
+            fl: {
+              top: '#2d373c',
+              topborder: '#1f2529',
+              bg: '#1e2429',
+              sidebar: '#22282e',
+              panel: '#283137',
+              header: '#323c44',
+              grid: '#1f252b',
+              gridLine: '#2a333a',
+              gridBar: '#394650',
+              border: '#3b4751',
+              playhead: '#e58e26',
+              greenLED: '#55e662',
+              sliderThumb: '#e58e26'
             }
           },
           fontFamily: {
-            mono: ['"JetBrains Mono"', 'Consolas', 'monospace'],
-            sans: ['Inter', 'system-ui', 'sans-serif']
+            mono: ['"Consolas"', '"JetBrains Mono"', 'monospace'],
+            sans: ['"Segoe UI"', 'Inter', 'system-ui', 'sans-serif']
           }
         }
       }
@@ -33,197 +39,310 @@
   </script>
 
   <!-- Google Fonts & Lucide Icons -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://unpkg.com/lucide@latest"></script>
 
   <!-- WaveSurfer.js v7 CDN -->
   <script src="https://unpkg.com/wavesurfer.js@7/dist/wavesurfer.min.js"></script>
 
-  <!-- ==================== CSS TÙY CHỈNH (ĐÃ GHÉP) ==================== -->
   <style>
-    /* Nền lưới đặc trưng của DAW Playlist (FL Studio) */
-    .daw-grid-bg {
-      background-color: #181f24;
+    /* Nền Lưới Arrangement chuẩn FL Studio với vạch nhịp (Bar & Beat) */
+    .fl-arrangement-grid {
+      background-color: #1b2126;
       background-image: 
-        linear-gradient(to right, rgba(255, 255, 255, 0.05) 1px, transparent 1px),
-        linear-gradient(to right, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
-      background-size: 120px 100%, 30px 100%;
+        linear-gradient(to right, #36444f 1.5px, transparent 1.5px),
+        linear-gradient(to right, #252e35 1px, transparent 1px);
+      background-size: 160px 100%, 40px 100%;
     }
 
-    /* Đèn LED xanh lá trên mỗi Track Header */
-    .track-led {
+    /* Đèn LED tròn xanh lá đặc trưng bên cạnh mỗi Track của FL Studio */
+    .fl-led {
       width: 10px;
       height: 10px;
       border-radius: 50%;
-      background-color: #4cd964;
-      box-shadow: 0 0 8px #4cd964;
-      transition: all 0.2s ease;
+      background: #55e662;
+      box-shadow: 0 0 7px #55e662, inset 0 0 2px #fff;
+      cursor: pointer;
+      transition: all 0.15s ease;
     }
-
-    .track-led.off {
-      background-color: #2b353d;
+    .fl-led.off {
+      background: #1c2620;
       box-shadow: none;
+      border: 1px solid #2d3e33;
     }
 
-    /* Thanh cuộn chuẩn Dark Mode */
+    /* Tùy chỉnh thanh cuộn DAW */
     ::-webkit-scrollbar {
       width: 8px;
       height: 8px;
     }
     ::-webkit-scrollbar-track {
-      background: #14191d;
+      background: #15191c;
     }
     ::-webkit-scrollbar-thumb {
-      background: #34414b;
-      border-radius: 4px;
+      background: #394650;
+      border-radius: 3px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #495a67;
+      background: #4f6170;
+    }
+
+    /* Range slider tùy chỉnh chuẩn FL Studio */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #191f24;
+      height: 5px;
+      border-radius: 3px;
+      border: 1px solid #2e3942;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 13px;
+      width: 13px;
+      border-radius: 50%;
+      background: #e58e26;
+      cursor: pointer;
+      box-shadow: 0 0 4px rgba(0,0,0,0.8);
+    }
+
+    /* Peak meter mô phỏng FL Studio */
+    .peak-meter {
+      height: 10px;
+      background: #121619;
+      border: 1px solid #2e3942;
+      border-radius: 2px;
+      overflow: hidden;
+      display: flex;
+    }
+    .peak-meter-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(to right, #55e662 65%, #ffd32a 85%, #ff3f34 100%);
+      transition: width 0.08s ease;
     }
   </style>
 </head>
-<body class="bg-daw-bg text-slate-200 font-sans h-screen flex flex-col overflow-hidden select-none">
+<body class="bg-fl-bg text-slate-300 font-sans h-screen flex flex-col overflow-hidden select-none">
 
-  <!-- ==================== 1. TOP TRANSPORT BAR (THANH ĐIỀU KHIỂN TRUNG TÂM) ==================== -->
-  <header class="bg-daw-header border-b border-daw-border px-4 py-2 flex flex-wrap items-center justify-between gap-4 shadow-md z-20">
-    <!-- Logo & Tên Dự Án -->
+  <!-- ==================== 1. FL STUDIO TOP TOOLBAR / TRANSPORT BAR ==================== -->
+  <header class="bg-fl-top border-b border-fl-topborder px-3 py-1.5 flex flex-wrap items-center justify-between gap-3 shadow-md z-30">
+    
+    <!-- Cụm Menu & Logo -->
     <div class="flex items-center gap-3">
-      <div class="w-8 h-8 rounded bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center shadow-inner">
-        <i data-lucide="sliders" class="w-5 h-5 text-slate-950 stroke-[2.5]"></i>
+      <div class="w-7 h-7 rounded bg-gradient-to-tr from-amber-600 to-orange-400 flex items-center justify-center shadow-md">
+        <i data-lucide="music" class="w-4 h-4 text-slate-950 stroke-[2.5]"></i>
       </div>
       <div>
-        <h1 class="text-sm font-bold tracking-wider uppercase text-white flex items-center gap-2">
-          FL-StemStudio <span class="text-[10px] bg-orange-500/20 text-orange-400 border border-orange-500/40 px-1.5 py-0.5 rounded font-mono">FULL-IN-ONE v1.2</span>
-        </h1>
-        <p id="currentFileName" class="text-[11px] text-slate-400 truncate max-w-[220px]">Chưa tải file âm thanh</p>
+        <div class="flex items-center gap-1.5 text-[11px] font-bold text-slate-300">
+          <span class="hover:text-amber-400 cursor-pointer">FILE</span>
+          <span class="text-slate-600">/</span>
+          <span class="hover:text-amber-400 cursor-pointer">EDIT</span>
+          <span class="text-slate-600">/</span>
+          <span class="hover:text-amber-400 cursor-pointer">PATTERNS</span>
+          <span class="text-slate-600">/</span>
+          <span class="hover:text-amber-400 cursor-pointer">VIEW</span>
+        </div>
+        <div id="projectFileName" class="text-[12px] font-mono text-amber-400 font-semibold truncate max-w-[240px]">
+          [Chưa tải file nhạc]
+        </div>
       </div>
     </div>
 
-    <!-- Cụm điều khiển Playback & Đồng hồ LED -->
-    <div class="flex items-center gap-3 bg-daw-bg/90 px-4 py-1.5 rounded-md border border-daw-border shadow-inner">
-      <!-- Nút Play / Pause -->
-      <button id="btnPlayPause" disabled class="p-2 rounded bg-daw-panel hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-orange-400 transition" title="Play / Pause (Phím Space)">
-        <i data-lucide="play" class="w-5 h-5 fill-current"></i>
+    <!-- Cụm Transport (Play, Stop, Song/Pattern, LCD Bar Time) -->
+    <div class="flex items-center gap-2 bg-[#20272c] px-3 py-1 rounded border border-[#3b4752] shadow-inner">
+      <!-- Chế độ PAT / SONG -->
+      <div class="flex text-[10px] font-mono font-bold border border-[#3b4752] rounded overflow-hidden mr-1">
+        <button id="btnPat" class="px-1.5 py-0.5 bg-[#2d373d] text-slate-400 hover:text-white">PAT</button>
+        <button id="btnSong" class="px-1.5 py-0.5 bg-amber-500 text-slate-950">SONG</button>
+      </div>
+
+      <!-- Play Button -->
+      <button id="btnPlayPause" disabled class="p-1.5 rounded bg-[#2c353b] hover:bg-[#38444c] disabled:opacity-30 disabled:pointer-events-none text-amber-400 transition" title="Play / Pause (Phím Space)">
+        <i data-lucide="play" class="w-4 h-4 fill-current"></i>
       </button>
 
-      <!-- Nút Stop -->
-      <button id="btnStop" disabled class="p-2 rounded bg-daw-panel hover:bg-slate-700 disabled:opacity-40 disabled:pointer-events-none text-slate-300 transition" title="Stop">
-        <i data-lucide="square" class="w-5 h-5 fill-current"></i>
+      <!-- Stop Button -->
+      <button id="btnStop" disabled class="p-1.5 rounded bg-[#2c353b] hover:bg-[#38444c] disabled:opacity-30 disabled:pointer-events-none text-slate-300 transition" title="Stop">
+        <i data-lucide="square" class="w-4 h-4 fill-current"></i>
       </button>
 
-      <!-- Đồng hồ hiển thị thời gian chuẩn DAW (MM:SS.MS) -->
-      <div class="border-l border-r border-daw-border px-4 py-0.5 text-center">
-        <div class="text-[10px] text-slate-400 uppercase tracking-widest">Master Time</div>
-        <div class="font-mono text-lg font-bold text-amber-400 tracking-wider">
-          <span id="timeCurrent">00:00.00</span>
-          <span class="text-slate-600 text-xs">/</span>
-          <span id="timeDuration" class="text-slate-400 text-sm">00:00.00</span>
+      <!-- Màn hình kỹ thuật số hiển thị Bar / Time (LCD) -->
+      <div class="border-l border-r border-[#3b4752] px-3 py-0.5 text-center min-w-[130px]">
+        <div class="text-[9px] text-slate-500 uppercase tracking-widest font-mono">BAR : BEAT : TIME</div>
+        <div class="font-mono text-sm font-bold text-amber-400 tracking-wider">
+          <span id="lcdTimeDisplay">01:01.00</span>
         </div>
       </div>
 
-      <!-- Master Volume -->
-      <div class="flex items-center gap-2 pl-1">
-        <i data-lucide="volume-2" class="w-4 h-4 text-slate-400"></i>
+      <!-- BPM Display -->
+      <div class="flex items-center gap-1 px-1">
+        <span class="text-[10px] font-mono text-slate-400">BPM</span>
+        <span class="text-xs font-mono font-bold text-emerald-400 bg-[#161a1d] px-1.5 py-0.5 rounded border border-[#3b4752]">130.00</span>
+      </div>
+
+      <!-- Master Volume Slider -->
+      <div class="flex items-center gap-1.5 pl-2 border-l border-[#3b4752]">
+        <i data-lucide="volume-2" class="w-3.5 h-3.5 text-slate-400"></i>
         <input id="masterVolume" type="range" min="0" max="1" step="0.01" value="1" 
-               class="w-20 accent-orange-500 cursor-pointer h-1.5 bg-slate-700 rounded-lg" title="Master Volume" />
+               class="w-16 accent-amber-500 cursor-pointer" title="Master Volume" />
       </div>
     </div>
 
-    <!-- Cụm nút Hành động: Load Demo, Upload & Export Mix -->
+    <!-- Cụm Hành Động: Upload (Không giới hạn), Mock Data, Export -->
     <div class="flex items-center gap-2">
-      <button id="btnLoadDemo" class="px-3 py-1.5 rounded text-xs font-semibold bg-slate-700 hover:bg-slate-600 text-slate-100 border border-slate-500 flex items-center gap-1.5 transition">
-        <i data-lucide="sparkles" class="w-4 h-4 text-amber-400"></i>
-        Tải Mock Data (4 Stems)
+      <button id="btnMockData" class="px-2.5 py-1 rounded text-xs font-semibold bg-[#323c44] hover:bg-[#3f4c57] text-slate-200 border border-[#485662] flex items-center gap-1.5 transition">
+        <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+        Mock 4 Stems
       </button>
 
-      <button id="btnUploadModal" class="px-3 py-1.5 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 transition">
-        <i data-lucide="upload-cloud" class="w-4 h-4"></i>
-        Upload Audio
+      <button id="btnUploadModal" class="px-2.5 py-1 rounded text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white flex items-center gap-1.5 shadow transition">
+        <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+        Upload Audio (No Limit)
       </button>
 
-      <button id="btnExportMix" disabled class="px-3.5 py-1.5 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:pointer-events-none text-white flex items-center gap-1.5 shadow transition">
-        <i data-lucide="download" class="w-4 h-4"></i>
-        Export Mix (.WAV)
+      <button id="btnExportMix" disabled class="px-3 py-1 rounded text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 disabled:opacity-30 disabled:pointer-events-none text-white flex items-center gap-1.5 shadow transition">
+        <i data-lucide="download" class="w-3.5 h-3.5"></i>
+        Export WAV
       </button>
     </div>
   </header>
 
-  <!-- ==================== 2. KHU VỰC LÀM VIỆC CHÍNH (PLAYLIST & MULTI-TRACK MIXER) ==================== -->
-  <main class="flex-1 flex flex-col overflow-hidden relative">
-
-    <!-- Thanh Timeline / Seekbar đồng bộ chung (Ruler) -->
-    <div class="flex border-b border-daw-border bg-daw-panel h-8 items-center text-xs">
-      <!-- Cột khớp độ rộng với cột Track Control bên trái -->
-      <div class="w-72 shrink-0 border-r border-daw-border px-4 flex items-center justify-between text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-        <span>Playlist — Track Headers</span>
-        <button id="btnResetSoloMute" class="text-[10px] text-orange-400 hover:underline hidden">Reset M/S</button>
+  <!-- ==================== 2. MAIN WORKSPACE (SIDEBAR + PLAYLIST ARRANGEMENT) ==================== -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- Sidebar bên trái (Browser & Pattern Picker giống video FL Studio) -->
+    <aside class="w-56 bg-fl-sidebar border-r border-fl-border flex flex-col shrink-0 text-xs">
+      <!-- Header Sidebar -->
+      <div class="p-2.5 bg-[#273037] border-b border-fl-border font-bold text-slate-300 flex items-center justify-between">
+        <span class="flex items-center gap-1.5">
+          <i data-lucide="folder-git-2" class="w-3.5 h-3.5 text-amber-400"></i>
+          FL Browser
+        </span>
+        <span class="text-[10px] text-slate-400 font-mono">ALL</span>
       </div>
 
-      <!-- Thanh tua nhạc (Master Scrubber) -->
-      <div class="flex-1 relative h-full flex items-center px-3 bg-daw-bg/70">
-        <input id="masterSeek" type="range" min="0" max="1000" value="0" disabled
-               class="w-full h-1.5 bg-slate-700 accent-orange-500 rounded cursor-pointer z-10" />
-        <div class="absolute inset-x-3 top-1 flex justify-between text-[10px] font-mono text-slate-500 pointer-events-none">
-          <span>BAR 01</span><span>BAR 05</span><span>BAR 09</span><span>BAR 13</span><span>BAR 17</span><span>BAR 21</span><span>BAR 25</span>
+      <!-- Danh sách Stems / Patterns / Packs -->
+      <div class="flex-1 overflow-y-auto p-2 space-y-1 text-slate-400 font-mono text-[11px]">
+        <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-1 pt-1">Current Stems</div>
+        <div class="p-1.5 rounded bg-[#2e3942]/60 text-slate-200 flex items-center justify-between border border-fl-border/40">
+          <span class="flex items-center gap-1.5 text-pink-400">
+            <i data-lucide="mic" class="w-3 h-3"></i> Vocals
+          </span>
+          <span class="text-[9px] bg-pink-900/60 text-pink-300 px-1 rounded">STEM 1</span>
+        </div>
+        <div class="p-1.5 rounded bg-[#2e3942]/60 text-slate-200 flex items-center justify-between border border-fl-border/40">
+          <span class="flex items-center gap-1.5 text-orange-400">
+            <i data-lucide="drum" class="w-3 h-3"></i> Drums
+          </span>
+          <span class="text-[9px] bg-orange-900/60 text-orange-300 px-1 rounded">STEM 2</span>
+        </div>
+        <div class="p-1.5 rounded bg-[#2e3942]/60 text-slate-200 flex items-center justify-between border border-fl-border/40">
+          <span class="flex items-center gap-1.5 text-blue-400">
+            <i data-lucide="activity" class="w-3 h-3"></i> Bassline
+          </span>
+          <span class="text-[9px] bg-blue-900/60 text-blue-300 px-1 rounded">STEM 3</span>
+        </div>
+        <div class="p-1.5 rounded bg-[#2e3942]/60 text-slate-200 flex items-center justify-between border border-fl-border/40">
+          <span class="flex items-center gap-1.5 text-emerald-400">
+            <i data-lucide="music-2" class="w-3 h-3"></i> Instruments
+          </span>
+          <span class="text-[9px] bg-emerald-900/60 text-emerald-300 px-1 rounded">STEM 4</span>
+        </div>
+
+        <div class="text-[10px] uppercase font-bold text-slate-500 tracking-wider px-1 pt-3">Arrangement Info</div>
+        <div class="px-2 py-1 bg-[#1a2024] rounded text-[10px] text-slate-400 space-y-1 border border-[#2b353c]">
+          <div>Tách nhạc: <span class="text-amber-400">Demucs / WebAudio DSP</span></div>
+          <div>Dung lượng: <span class="text-emerald-400 font-bold">Không giới hạn MB</span></div>
+          <div>Playhead: <span class="text-orange-400">FL Studio Orange Line</span></div>
         </div>
       </div>
-    </div>
 
-    <!-- Danh sách các Track xếp chồng lên nhau (FL Studio Playlist Arrangement) -->
-    <div id="tracksWrapper" class="flex-1 overflow-y-auto relative divide-y divide-daw-border daw-grid-bg">
-      <!-- Các Track (Vocals, Drums, Bass, Other) được render tự động -->
-    </div>
+      <!-- Master Peak Meter nhỏ ở góc dưới Sidebar -->
+      <div class="p-2 bg-[#1d2328] border-t border-fl-border">
+        <div class="flex justify-between text-[10px] font-mono text-slate-400 mb-1">
+          <span>MASTER PEAK</span>
+          <span id="peakDbVal">-inf dB</span>
+        </div>
+        <div class="peak-meter">
+          <div id="masterPeakFill" class="peak-meter-fill"></div>
+        </div>
+      </div>
+    </aside>
 
-    <!-- ==================== OVERLAY KÉO THẢ UPLOAD BAN ĐẦU ==================== -->
-    <div id="uploadOverlay" class="absolute inset-0 bg-daw-bg/95 backdrop-blur-sm z-30 flex items-center justify-center p-6">
-      <div class="max-w-lg w-full bg-daw-panel border-2 border-dashed border-slate-600 hover:border-orange-500 rounded-xl p-8 text-center transition-all shadow-2xl relative">
-        <button id="btnCloseOverlay" class="hidden absolute top-3 right-3 text-slate-400 hover:text-white p-1" title="Đóng">
-          <i data-lucide="x" class="w-5 h-5"></i>
-        </button>
-
-        <input type="file" id="fileInput" accept=".mp3,.wav,audio/mpeg,audio/wav" class="hidden" />
-        
-        <div class="w-16 h-16 rounded-full bg-orange-500/10 border border-orange-500/30 flex items-center justify-center mx-auto mb-4 text-orange-400">
-          <i data-lucide="music-4" class="w-8 h-8"></i>
+    <!-- Khu vực chính: FL Studio Playlist - Arrangement -->
+    <main class="flex-1 flex flex-col overflow-hidden relative bg-[#181d22]">
+      
+      <!-- Playlist Top Header: Bar Numbers & Timeline Scrubber (Ruler) -->
+      <div class="flex h-7 bg-[#273037] border-b border-fl-border items-center text-xs">
+        <!-- Track Header Col Spacer -->
+        <div class="w-64 shrink-0 border-r border-fl-border px-3 flex items-center justify-between text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+          <span>Track Headers</span>
+          <button id="btnResetSoloMute" class="text-[10px] text-amber-400 hover:underline hidden">Reset M/S</button>
         </div>
 
-        <h2 class="text-lg font-bold text-white mb-1">Tải lên File Âm thanh để Tách Stems</h2>
-        <p class="text-xs text-slate-400 mb-6 leading-relaxed">
-          Kéo thả file <code class="text-orange-400">.mp3</code> hoặc <code class="text-orange-400">.wav</code> vào đây (Tối đa 50MB).<br/>
-          Hệ thống tự động gọi <b>AI Backend (Demucs)</b> hoặc dùng <b>WebAudio Multi-band DSP</b> tích hợp sẵn để tách thành 4 rãnh: <b>Vocals, Drums, Bass, Instruments</b>.
-        </p>
-
-        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <button id="btnSelectFile" class="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-orange-500 hover:bg-orange-600 text-slate-950 font-bold text-xs uppercase tracking-wider transition shadow-lg">
-            Chọn File Nhạc (.MP3 / .WAV)
-          </button>
-          <button id="btnQuickDemo" class="w-full sm:w-auto px-5 py-2.5 rounded-lg bg-slate-700 hover:bg-slate-600 text-white font-semibold text-xs transition border border-slate-500">
-            Dùng thử ngay với Mock Data
-          </button>
-        </div>
-
-        <!-- Trạng thái xử lý AI / DSP -->
-        <div id="aiProcessingBox" class="hidden mt-6 pt-5 border-t border-daw-border">
-          <div class="flex items-center justify-center gap-2 text-xs text-amber-400 font-mono mb-2">
-            <i data-lucide="loader-2" class="w-4 h-4 animate-spin"></i>
-            <span id="aiStatusText">Đang phân tích và tách Stems...</span>
+        <!-- Master Timeline / Scrubber Ruler -->
+        <div class="flex-1 relative h-full flex items-center px-3 bg-[#1e242a]">
+          <input id="masterSeek" type="range" min="0" max="1000" value="0" disabled
+                 class="w-full h-1 bg-[#2c363f] accent-fl-playhead rounded cursor-pointer z-10" />
+          <div class="absolute inset-x-3 top-0.5 flex justify-between text-[9px] font-mono text-slate-500 pointer-events-none">
+            <span>BAR 1</span><span>BAR 5</span><span>BAR 9</span><span>BAR 13</span><span>BAR 17</span><span>BAR 21</span><span>BAR 25</span><span>BAR 29</span><span>BAR 33</span>
           </div>
-          <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-            <div id="aiProgressBar" class="bg-gradient-to-r from-orange-500 to-amber-400 h-full w-1/3 transition-all duration-300"></div>
+        </div>
+      </div>
+
+      <!-- Danh sách các Track xếp chồng theo chiều dọc (Playlist Tracks) -->
+      <div id="tracksWrapper" class="flex-1 overflow-y-auto relative divide-y divide-fl-border/50 fl-arrangement-grid">
+        <!-- 4 Stems hoặc nhiều Tracks được sinh ra ở đây -->
+      </div>
+
+      <!-- ==================== UPLOAD MODAL & TIẾN TRÌNH TÁCH NHẠC ==================== -->
+      <div id="uploadOverlay" class="absolute inset-0 bg-[#121619]/90 backdrop-blur-sm z-40 flex items-center justify-center p-4">
+        <div class="max-w-md w-full bg-fl-panel border border-[#485663] rounded-lg p-6 shadow-2xl relative text-center">
+          <button id="btnCloseOverlay" class="hidden absolute top-3 right-3 text-slate-400 hover:text-white p-1">
+            <i data-lucide="x" class="w-4 h-4"></i>
+          </button>
+
+          <input type="file" id="fileInput" accept=".mp3,.wav,audio/*" class="hidden" />
+
+          <div class="w-14 h-14 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center mx-auto mb-3 text-amber-400">
+            <i data-lucide="music-3" class="w-7 h-7"></i>
+          </div>
+
+          <h2 class="text-base font-bold text-white mb-1 uppercase tracking-wide">Import File Nhạc (Không Giới Hạn MB)</h2>
+          <p class="text-xs text-slate-400 mb-5 leading-relaxed">
+            Hỗ trợ kéo thả hoặc chọn file <code class="text-amber-400 font-mono">.MP3 / .WAV</code> với <b>bất kỳ dung lượng nào</b> (100MB, 500MB+).<br/>
+            Nếu không có Python Backend, ứng dụng sẽ dùng bộ lọc <b>WebAudio Multi-band DSP</b> giải mã trực tiếp trên máy của bạn.
+          </p>
+
+          <div class="flex flex-col sm:flex-row gap-2 justify-center">
+            <button id="btnSelectFile" class="px-4 py-2 rounded bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs uppercase tracking-wider transition shadow">
+              Chọn File Nhạc (No Limit)
+            </button>
+            <button id="btnQuickDemo" class="px-4 py-2 rounded bg-[#37434d] hover:bg-[#43525e] text-slate-200 font-semibold text-xs transition border border-[#4d5c69]">
+              Load Mock Loop (130 BPM)
+            </button>
+          </div>
+
+          <!-- Trạng thái xử lý -->
+          <div id="processingBox" class="hidden mt-5 pt-4 border-t border-fl-border">
+            <div class="flex items-center justify-center gap-2 text-xs text-amber-400 font-mono mb-2">
+              <i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>
+              <span id="processingText">Đang đọc file & phân tích các dải tần...</span>
+            </div>
+            <div class="w-full bg-[#1b2227] h-1.5 rounded-full overflow-hidden border border-[#37444f]">
+              <div id="progressBar" class="bg-gradient-to-r from-amber-500 to-orange-500 h-full w-1/4 transition-all duration-300"></div>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
-    <!-- Thông báo lỗi / Toast Message -->
-    <div id="toastContainer" class="fixed bottom-5 right-5 z-50 flex flex-col gap-2 max-w-sm"></div>
-  </main>
+      <!-- Toast container -->
+      <div id="toastContainer" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2 max-w-sm"></div>
+    </main>
+  </div>
 
-  <!-- ==================== JAVASCRIPT LOGIC (ĐÃ GHÉP) ==================== -->
+  <!-- ==================== 3. JAVASCRIPT CORE ==================== -->
   <script>
-    /**
-     * CẤU HÌNH 4 STEMS TIÊU CHUẨN TRONG DAW
-     */
     const STEM_CONFIGS = [
       { id: 'vocals', name: 'Track 1 - Vocals',      color: '#ec4899', icon: 'mic' },
       { id: 'drums',  name: 'Track 2 - Drums',       color: '#f97316', icon: 'drum' },
@@ -231,8 +350,6 @@
       { id: 'other',  name: 'Track 4 - Instruments', color: '#10b981', icon: 'piano' }
     ];
 
-    const MAX_FILE_SIZE_MB = 50;
-    const ALLOWED_MIME_TYPES = ['audio/mpeg', 'audio/wav', 'audio/x-wav', 'audio/mp3'];
     const BACKEND_API_URL = 'http://localhost:8000/api/separate';
 
     const state = {
@@ -241,14 +358,15 @@
       isReady: false,
       isSyncingSeek: false,
       duration: 0,
-      masterVolume: 1.0
+      masterVolume: 1.0,
+      animFrameId: null
     };
 
     const dom = {
       tracksWrapper: document.getElementById('tracksWrapper'),
       btnPlayPause: document.getElementById('btnPlayPause'),
       btnStop: document.getElementById('btnStop'),
-      btnLoadDemo: document.getElementById('btnLoadDemo'),
+      btnMockData: document.getElementById('btnMockData'),
       btnQuickDemo: document.getElementById('btnQuickDemo'),
       btnUploadModal: document.getElementById('btnUploadModal'),
       btnCloseOverlay: document.getElementById('btnCloseOverlay'),
@@ -259,13 +377,14 @@
       uploadOverlay: document.getElementById('uploadOverlay'),
       masterSeek: document.getElementById('masterSeek'),
       masterVolume: document.getElementById('masterVolume'),
-      timeCurrent: document.getElementById('timeCurrent'),
-      timeDuration: document.getElementById('timeDuration'),
-      currentFileName: document.getElementById('currentFileName'),
-      aiProcessingBox: document.getElementById('aiProcessingBox'),
-      aiStatusText: document.getElementById('aiStatusText'),
-      aiProgressBar: document.getElementById('aiProgressBar'),
-      toastContainer: document.getElementById('toastContainer')
+      lcdTimeDisplay: document.getElementById('lcdTimeDisplay'),
+      projectFileName: document.getElementById('projectFileName'),
+      processingBox: document.getElementById('processingBox'),
+      processingText: document.getElementById('processingText'),
+      progressBar: document.getElementById('progressBar'),
+      toastContainer: document.getElementById('toastContainer'),
+      masterPeakFill: document.getElementById('masterPeakFill'),
+      peakDbVal: document.getElementById('peakDbVal')
     };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -275,52 +394,53 @@
     });
 
     /**
-     * 1. RENDER CÁC RÃNH (TRACK ROWS) XẾP CHỒNG PHONG CÁCH FL STUDIO
+     * 1. TẠO CÁC TRACK FL STUDIO XẾP CHỒNG
      */
     function renderTrackRows() {
       dom.tracksWrapper.innerHTML = '';
 
       STEM_CONFIGS.forEach((stem) => {
         const row = document.createElement('div');
-        row.className = 'flex h-28 items-stretch group hover:bg-white/[0.01] transition';
+        row.className = 'flex h-24 items-stretch group hover:bg-white/[0.02] transition border-b border-[#29333b]';
         row.innerHTML = `
-          <!-- Cột điều khiển Track bên trái -->
-          <div class="w-72 shrink-0 bg-daw-panel border-r border-daw-border p-3 flex flex-col justify-between select-none">
+          <!-- Cột Điều Khiển Track Header bên trái giống video FL Studio -->
+          <div class="w-64 shrink-0 bg-[#262f35] border-r border-fl-border p-2.5 flex flex-col justify-between select-none">
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <span id="led-${stem.id}" class="track-led" title="Trạng thái Kênh"></span>
-                <span class="text-xs font-bold text-white tracking-wide flex items-center gap-1.5">
+              <div class="flex items-center gap-2">
+                <!-- Đèn LED xanh lá bật/tắt của FL Studio -->
+                <span id="led-${stem.id}" data-id="${stem.id}" class="fl-led" title="Mute/Unmute kênh"></span>
+                <span class="text-xs font-bold text-slate-200 tracking-wide flex items-center gap-1.5">
                   <i data-lucide="${stem.icon}" class="w-3.5 h-3.5" style="color:${stem.color}"></i>
                   ${stem.name}
                 </span>
               </div>
-              <span id="volLabel-${stem.id}" class="font-mono text-[11px] text-slate-400">100%</span>
+              <span id="volLabel-${stem.id}" class="font-mono text-[10px] text-slate-400">100%</span>
             </div>
 
-            <!-- Nút Mute (M), Solo (S) và Thanh trượt Volume -->
-            <div class="flex items-center gap-2 mt-2">
+            <!-- Controls: Mute, Solo, Volume -->
+            <div class="flex items-center gap-1.5 mt-1.5">
               <button id="mute-${stem.id}" data-id="${stem.id}" 
-                      class="btn-mute px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-daw-bg border border-daw-border text-slate-300 hover:border-slate-400 transition"
-                      title="Mute (Tắt tiếng rãnh này)">
+                      class="btn-mute px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1c2226] border border-[#3b4752] text-slate-400 hover:text-white transition"
+                      title="Mute Track">
                 M
               </button>
               <button id="solo-${stem.id}" data-id="${stem.id}" 
-                      class="btn-solo px-2.5 py-1 rounded text-[11px] font-mono font-bold bg-daw-bg border border-daw-border text-slate-300 hover:border-slate-400 transition"
-                      title="Solo (Chỉ nghe rãnh này)">
+                      class="btn-solo px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#1c2226] border border-[#3b4752] text-slate-400 hover:text-white transition"
+                      title="Solo Track">
                 S
               </button>
 
-              <div class="flex-1 flex items-center gap-1.5 pl-2">
-                <i data-lucide="volume-1" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+              <div class="flex-1 flex items-center gap-1 pl-1">
+                <i data-lucide="volume-1" class="w-3 h-3 text-slate-500 shrink-0"></i>
                 <input id="vol-${stem.id}" data-id="${stem.id}" type="range" min="0" max="1" step="0.01" value="1"
-                       class="slider-vol w-full h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+                       class="slider-vol w-full h-1 bg-[#1a2024] cursor-pointer"
                        style="accent-color: ${stem.color}" />
               </div>
             </div>
           </div>
 
-          <!-- Khung vẽ biểu đồ sóng âm (Waveform Container) bên phải -->
-          <div class="flex-1 relative flex flex-col justify-center px-2 overflow-hidden">
+          <!-- Khung vẽ biểu đồ sóng âm (Waveform Container) trên nền lưới FL Playlist -->
+          <div class="flex-1 relative flex flex-col justify-center px-1 overflow-hidden">
             <div id="waveform-${stem.id}" class="w-full"></div>
           </div>
         `;
@@ -331,13 +451,13 @@
     }
 
     /**
-     * 2. KHỞI TẠO WAVESURFER & ĐỒNG BỘ MULTI-TRACK
+     * 2. LOAD VÀ ĐỒNG BỘ MULTI-TRACK WAVESURFER
      */
-    async function loadStemsIntoMixer(stemUrls, title = 'Demo_Project_Stems.wav') {
+    async function loadStemsIntoMixer(stemUrls, title = 'FL_Studio_Project.wav') {
       try {
         stopAllTracks();
         state.isReady = false;
-        dom.currentFileName.textContent = title;
+        dom.projectFileName.textContent = title;
 
         Object.values(state.tracks).forEach(t => t.ws && t.ws.destroy());
         state.tracks = {};
@@ -347,14 +467,14 @@
         STEM_CONFIGS.forEach((stem, index) => {
           const ws = WaveSurfer.create({
             container: `#waveform-${stem.id}`,
-            waveColor: stem.color + '88',
+            waveColor: stem.color + '77',
             progressColor: stem.color,
-            cursorColor: '#ff8c00',
+            cursorColor: '#e58e26', // Màu cam đường Playhead FL Studio
             cursorWidth: 2,
             barWidth: 2,
             barGap: 1,
             barRadius: 2,
-            height: 86,
+            height: 72,
             normalize: true,
             interact: true
           });
@@ -398,12 +518,12 @@
           }
 
           ws.on('error', (err) => {
-            showToast(`Lỗi tải track ${stem.name}: ${err}`, 'error');
+            showToast(`Lỗi tải rãnh ${stem.name}: ${err}`, 'error');
           });
         });
 
       } catch (error) {
-        showToast('Không thể khởi tạo bộ trộn âm thanh: ' + error.message, 'error');
+        showToast('Không thể nạp stems vào bộ trộn: ' + error.message, 'error');
       }
     }
 
@@ -412,8 +532,7 @@
       const masterTrack = state.tracks[STEM_CONFIGS[0].id].ws;
       state.duration = masterTrack.getDuration();
 
-      dom.timeDuration.textContent = formatTime(state.duration);
-      dom.timeCurrent.textContent = formatTime(0);
+      updateTimeDisplay(0);
 
       dom.btnPlayPause.disabled = false;
       dom.btnStop.disabled = false;
@@ -422,17 +541,9 @@
       dom.uploadOverlay.classList.add('hidden');
       dom.btnCloseOverlay.classList.remove('hidden');
 
-      // Reset giao diện nút M/S và thanh trượt
-      document.querySelectorAll('.btn-mute').forEach(b => b.classList.remove('bg-red-600', 'text-white', 'border-red-400'));
-      document.querySelectorAll('.btn-solo').forEach(b => b.classList.remove('bg-amber-500', 'text-slate-950', 'border-amber-300'));
-      document.querySelectorAll('.slider-vol').forEach(s => { s.value = 1; });
-      STEM_CONFIGS.forEach(st => {
-        const lbl = document.getElementById(`volLabel-${st.id}`);
-        if (lbl) lbl.textContent = '100%';
-      });
-
       applyEffectiveVolumes();
-      showToast('Đã tải và đồng bộ thành công 4 Stems âm thanh!', 'success');
+      startPeakMeterSimulation();
+      showToast('Đã nạp và đồng bộ hoàn tất các Stems!', 'success');
     }
 
     function syncSeekAcrossTracks(targetTime, sourceTrackId = null) {
@@ -487,7 +598,7 @@
     }
 
     /**
-     * 3. MA TRẬN MUTE / SOLO / VOLUME
+     * 3. MUTE / SOLO / VOLUME & ĐÈN LED FL STUDIO
      */
     function applyEffectiveVolumes() {
       const trackList = Object.values(state.tracks);
@@ -509,6 +620,7 @@
           track.ws.setVolume(effectiveVol);
         }
 
+        // Bật/tắt đèn LED xanh lá tròn FL Studio
         const ledEl = document.getElementById(`led-${track.id}`);
         if (ledEl) {
           ledEl.classList.toggle('off', !isAudible || effectiveVol === 0);
@@ -517,139 +629,40 @@
     }
 
     /**
-     * 4. EXPORT MIX (.WAV) BẰNG OFFLINEAUDIOCONTEXT
+     * 4. MÔ PHỎNG VẠCH SÓNG PEAK METER CHUẨN FL STUDIO
      */
-    async function exportFinalMixToWav() {
-      if (!state.isReady) return;
+    function startPeakMeterSimulation() {
+      if (state.animFrameId) cancelAnimationFrame(state.animFrameId);
 
-      try {
-        dom.btnExportMix.disabled = true;
-        showToast('Đang trộn (Mixdown) các rãnh âm thanh đang bật...', 'info');
-
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        const trackList = Object.values(state.tracks);
-        const anySolo = trackList.some(t => t.soloed);
-
-        const activeTracks = trackList.filter(t => {
-          const audible = anySolo ? (t.soloed && !t.muted) : !t.muted;
-          return audible && (t.volume * state.masterVolume) > 0;
-        });
-
-        if (activeTracks.length === 0) {
-          showToast('Không thể xuất file vì tất cả các rãnh đều đang bị tắt tiếng (Mute)!', 'error');
-          dom.btnExportMix.disabled = false;
-          return;
+      const updateMeter = () => {
+        if (state.isPlaying) {
+          const rand = Math.random() * 0.4 + 0.55;
+          const pct = Math.min(100, Math.round(rand * state.masterVolume * 100));
+          dom.masterPeakFill.style.width = pct + '%';
+          const db = (20 * Math.log10(rand * state.masterVolume)).toFixed(1);
+          dom.peakDbVal.textContent = `${db} dB`;
+        } else {
+          dom.masterPeakFill.style.width = '0%';
+          dom.peakDbVal.textContent = '-inf dB';
         }
-
-        const decodedBuffers = await Promise.all(
-          activeTracks.map(async (t) => {
-            const res = await fetch(t.url);
-            const arrayBuf = await res.arrayBuffer();
-            const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
-            return { buffer: audioBuf, gain: t.volume * state.masterVolume };
-          })
-        );
-
-        const sampleRate = decodedBuffers[0].buffer.sampleRate;
-        const maxLength = Math.max(...decodedBuffers.map(d => d.buffer.length));
-        const offlineCtx = new OfflineAudioContext(2, maxLength, sampleRate);
-
-        decodedBuffers.forEach(({ buffer, gain }) => {
-          const source = offlineCtx.createBufferSource();
-          source.buffer = buffer;
-
-          const gainNode = offlineCtx.createGain();
-          gainNode.gain.value = gain;
-
-          source.connect(gainNode);
-          gainNode.connect(offlineCtx.destination);
-          source.start(0);
-        });
-
-        const renderedBuffer = await offlineCtx.startRendering();
-        const wavBlob = audioBufferToWavBlob(renderedBuffer);
-
-        const downloadUrl = URL.createObjectURL(wavBlob);
-        const a = document.createElement('a');
-        a.href = downloadUrl;
-        a.download = `FL_StemStudio_Mixdown_${Date.now()}.wav`;
-        a.click();
-        URL.revokeObjectURL(downloadUrl);
-        audioCtx.close();
-
-        showToast('Xuất bản phối .WAV thành công!', 'success');
-      } catch (err) {
-        showToast('Lỗi khi xuất bản phối: ' + err.message, 'error');
-      } finally {
-        dom.btnExportMix.disabled = false;
-      }
-    }
-
-    function audioBufferToWavBlob(buffer) {
-      const numOfChan = buffer.numberOfChannels;
-      const length = buffer.length * numOfChan * 2 + 44;
-      const out = new ArrayBuffer(length);
-      const view = new DataView(out);
-      const channels = [];
-      let sample, offset = 0, pos = 0;
-
-      const setUint16 = (data) => { view.setUint16(pos, data, true); pos += 2; };
-      const setUint32 = (data) => { view.setUint32(pos, data, true); pos += 4; };
-
-      setUint32(0x46464952); // "RIFF"
-      setUint32(length - 8);
-      setUint32(0x45564157); // "WAVE"
-      setUint32(0x20746d66); // "fmt "
-      setUint32(16);
-      setUint16(1);
-      setUint16(numOfChan);
-      setUint32(buffer.sampleRate);
-      setUint32(buffer.sampleRate * 2 * numOfChan);
-      setUint16(numOfChan * 2);
-      setUint16(16);
-      setUint32(0x61746164); // "data"
-      setUint32(length - pos - 4);
-
-      for (let i = 0; i < numOfChan; i++) {
-        channels.push(buffer.getChannelData(i));
-      }
-
-      while (pos < length) {
-        for (let i = 0; i < numOfChan; i++) {
-          sample = Math.max(-1, Math.min(1, channels[i][offset]));
-          sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
-          view.setInt16(pos, sample, true);
-          pos += 2;
-        }
-        offset++;
-      }
-
-      return new Blob([out], { type: 'audio/wav' });
+        state.animFrameId = requestAnimationFrame(updateMeter);
+      };
+      updateMeter();
     }
 
     /**
-     * 5. XỬ LÝ UPLOAD FILE & TỰ ĐỘNG CHUYỂN QUA CLIENT-SIDE DSP NẾU CHƯA BẬT PYTHON BACKEND
+     * 5. XỬ LÝ UPLOAD KHÔNG GIỚI HẠN DUNG LƯỢNG (NO LIMIT MB)
      */
-    async function handleFileUpload(file) {
+    async function handleFileUploadNoLimit(file) {
       if (!file) return;
 
-      const isValidExt = /\.(mp3|wav)$/i.test(file.name);
-      if (!ALLOWED_MIME_TYPES.includes(file.type) && !isValidExt) {
-        showToast('Định dạng không hỗ trợ! Vui lòng chọn file .mp3 hoặc .wav.', 'error');
-        return;
-      }
-
-      const fileSizeMB = file.size / (1024 * 1024);
-      if (fileSizeMB > MAX_FILE_SIZE_MB) {
-        showToast(`File quá lớn (${fileSizeMB.toFixed(1)}MB)! Giới hạn tối đa là ${MAX_FILE_SIZE_MB}MB.`, 'error');
-        return;
-      }
-
-      dom.aiProcessingBox.classList.remove('hidden');
-      dom.aiStatusText.textContent = `Đang kết nối AI Backend để tách "${file.name}"...`;
-      dom.aiProgressBar.style.width = '35%';
+      const fileSizeMB = (file.size / (1024 * 1024)).toFixed(1);
+      dom.processingBox.classList.remove('hidden');
+      dom.processingText.textContent = `Đang nạp file "${file.name}" (${fileSizeMB} MB)...`;
+      dom.progressBar.style.width = '30%';
 
       try {
+        // Thử gửi sang Backend Python nếu đang chạy
         const formData = new FormData();
         formData.append('file', file);
 
@@ -663,26 +676,22 @@
         });
         clearTimeout(timeoutId);
 
-        if (!response.ok) {
-          throw new Error(`Server trả về mã lỗi ${response.status}`);
+        if (response.ok) {
+          const data = await response.json();
+          dom.progressBar.style.width = '100%';
+          await loadStemsIntoMixer(data.stems, file.name);
+          return;
         }
-
-        const data = await response.json();
-        dom.aiProgressBar.style.width = '100%';
-        await loadStemsIntoMixer(data.stems, file.name);
-      } catch (err) {
-        // Fallback: Tách trực tiếp bài nhạc người dùng vừa tải lên bằng bộ lọc WebAudio Multi-band DSP trên trình duyệt
-        dom.aiStatusText.textContent = `Backend Python chưa bật -> Đang tách "${file.name}" bằng WebAudio DSP trực tiếp trên trình duyệt...`;
-        dom.aiProgressBar.style.width = '75%';
-        await splitUploadedAudioClientSide(file);
-      } finally {
-        dom.aiProcessingBox.classList.add('hidden');
+      } catch (e) {
+        // Bỏ qua lỗi và chuyển sang WebAudio DSP nội bộ
       }
+
+      // Xử lý Offline WebAudio DSP trực tiếp ngay trên trình duyệt
+      dom.processingText.textContent = `Đang giải mã và phân dải Stems (${fileSizeMB} MB)...`;
+      dom.progressBar.style.width = '60%';
+      await splitUploadedAudioClientSide(file);
     }
 
-    /**
-     * TÁCH TRỰC TIẾP FILE NHẠC CỦA NGƯỜI DÙNG BẰNG WEBAUDIO MULTI-BAND FILTER (KHI CHƯA BẬT PYTHON)
-     */
     async function splitUploadedAudioClientSide(file) {
       try {
         const arrayBuffer = await file.arrayBuffer();
@@ -713,32 +722,34 @@
         };
 
         const [vocalsUrl, drumsUrl, bassUrl, otherUrl] = await Promise.all([
-          renderFilteredStem('bandpass', 1100, 0.9), // dải tần giọng hát (Mid/Vocal)
-          renderFilteredStem('peaking', 180, 1.5),   // dải tần trống/nhịp (Kick/Snare punch)
-          renderFilteredStem('lowpass', 140, 0.8),   // dải tần Sub/Bassline
-          renderFilteredStem('highpass', 2400, 0.7)  // dải tần nhạc cụ cao/Hi-hat/Synth
+          renderFilteredStem('bandpass', 1150, 0.9), // Dải Vocal
+          renderFilteredStem('peaking', 160, 1.6),   // Dải Drums
+          renderFilteredStem('lowpass', 140, 0.8),   // Dải Bass
+          renderFilteredStem('highpass', 2400, 0.7)  // Dải Instrument
         ]);
 
-        dom.aiProgressBar.style.width = '100%';
+        dom.progressBar.style.width = '100%';
         await loadStemsIntoMixer({
           vocals: vocalsUrl,
           drums: drumsUrl,
           bass: bassUrl,
           other: otherUrl
-        }, `${file.name} (WebAudio DSP Stems)`);
+        }, `${file.name}`);
       } catch (error) {
-        showToast('Không thể giải mã file âm thanh này, chuyển sang Mock Data mẫu.', 'error');
+        showToast('Không thể giải mã file này, đang dùng Mock Data mẫu.', 'error');
         await generateAndLoadMockStems();
+      } finally {
+        dom.processingBox.classList.add('hidden');
       }
     }
 
     /**
-     * 6. BỘ TẠO MOCK DATA 4 STEMS BẰNG WEB AUDIO API (1 CLICK TEST NGAY)
+     * 6. MOCK DATA MẪU (130 BPM FL STUDIO LOOP)
      */
-    async function generateAndLoadMockStems(customTitle = 'FL_Studio_Demo_Loop_120BPM.wav') {
-      showToast('Đang khởi tạo 4 Stems âm thanh mẫu (120 BPM)...', 'info');
+    async function generateAndLoadMockStems(customTitle = 'FL_Studio_Project_130BPM.wav') {
+      showToast('Đang tạo 4 Stems mẫu chuẩn 130 BPM...', 'info');
       const sampleRate = 44100;
-      const duration = 12;
+      const duration = 15;
       const length = sampleRate * duration;
 
       const createStemWavUrl = (generatorFn) => {
@@ -757,35 +768,39 @@
         return URL.createObjectURL(audioBufferToWavBlob(buffer));
       };
 
+      // Vocals lead melody
       const vocalsUrl = createStemWavUrl((t) => {
         const notes = [523.25, 659.25, 587.33, 493.88];
-        const freq = notes[Math.floor(t / 1.5) % notes.length];
-        const vibrato = Math.sin(2 * Math.PI * 5.5 * t) * 4;
-        const env = Math.sin(Math.PI * ((t % 1.5) / 1.5));
+        const freq = notes[Math.floor(t / 1.8) % notes.length];
+        const vibrato = Math.sin(2 * Math.PI * 6.0 * t) * 5;
+        const env = Math.sin(Math.PI * ((t % 1.8) / 1.8));
         return Math.sin(2 * Math.PI * (freq + vibrato) * t) * env * 0.45;
       });
 
+      // Drums
       const drumsUrl = createStemWavUrl((t) => {
-        const beatTime = t % 0.5;
-        const kickFreq = 140 * Math.exp(-beatTime * 28) + 45;
-        const kick = Math.sin(2 * Math.PI * kickFreq * beatTime) * Math.exp(-beatTime * 9) * 0.7;
-        const hatTime = t % 0.25;
-        const hihat = (Math.random() * 2 - 1) * Math.exp(-hatTime * 45) * 0.25;
+        const beatTime = t % 0.46; // ~130 BPM
+        const kickFreq = 150 * Math.exp(-beatTime * 30) + 40;
+        const kick = Math.sin(2 * Math.PI * kickFreq * beatTime) * Math.exp(-beatTime * 10) * 0.7;
+        const hatTime = t % 0.23;
+        const hihat = (Math.random() * 2 - 1) * Math.exp(-hatTime * 50) * 0.25;
         return Math.max(-0.9, Math.min(0.9, kick + hihat));
       });
 
+      // Bass
       const bassUrl = createStemWavUrl((t) => {
         const bassNotes = [65.41, 82.41, 73.42, 61.74];
-        const freq = bassNotes[Math.floor(t / 1.5) % bassNotes.length];
+        const freq = bassNotes[Math.floor(t / 1.8) % bassNotes.length];
         const pulse = Math.sin(2 * Math.PI * freq * t) + 0.4 * Math.sin(4 * Math.PI * freq * t);
-        const gate = Math.exp(-((t % 0.5) * 3.5));
+        const gate = Math.exp(-((t % 0.46) * 4.0));
         return pulse * gate * 0.45;
       });
 
+      // Instruments
       const otherUrl = createStemWavUrl((t) => {
         const arpNotes = [261.63, 329.63, 392.00, 523.25];
-        const freq = arpNotes[Math.floor(t * 4) % arpNotes.length];
-        const env = Math.exp(-((t % 0.25) * 10));
+        const freq = arpNotes[Math.floor(t * 4.3) % arpNotes.length];
+        const env = Math.exp(-((t % 0.23) * 11));
         return Math.sin(2 * Math.PI * freq * t) * env * 0.35;
       });
 
@@ -798,7 +813,114 @@
     }
 
     /**
-     * 7. ĐĂNG KÝ SỰ KIỆN GIAO DIỆN
+     * 7. EXPORT MIX (.WAV)
+     */
+    async function exportFinalMixToWav() {
+      if (!state.isReady) return;
+
+      try {
+        dom.btnExportMix.disabled = true;
+        showToast('Đang render bản phối WAV...', 'info');
+
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        const trackList = Object.values(state.tracks);
+        const anySolo = trackList.some(t => t.soloed);
+
+        const activeTracks = trackList.filter(t => {
+          const audible = anySolo ? (t.soloed && !t.muted) : !t.muted;
+          return audible && (t.volume * state.masterVolume) > 0;
+        });
+
+        if (activeTracks.length === 0) {
+          showToast('Tất cả rãnh đang Mute!', 'error');
+          dom.btnExportMix.disabled = false;
+          return;
+        }
+
+        const decodedBuffers = await Promise.all(
+          activeTracks.map(async (t) => {
+            const res = await fetch(t.url);
+            const arrayBuf = await res.arrayBuffer();
+            const audioBuf = await audioCtx.decodeAudioData(arrayBuf);
+            return { buffer: audioBuf, gain: t.volume * state.masterVolume };
+          })
+        );
+
+        const sampleRate = decodedBuffers[0].buffer.sampleRate;
+        const maxLength = Math.max(...decodedBuffers.map(d => d.buffer.length));
+        const offlineCtx = new OfflineAudioContext(2, maxLength, sampleRate);
+
+        decodedBuffers.forEach(({ buffer, gain }) => {
+          const source = offlineCtx.createBufferSource();
+          source.buffer = buffer;
+          const gainNode = offlineCtx.createGain();
+          gainNode.gain.value = gain;
+          source.connect(gainNode);
+          gainNode.connect(offlineCtx.destination);
+          source.start(0);
+        });
+
+        const renderedBuffer = await offlineCtx.startRendering();
+        const wavBlob = audioBufferToWavBlob(renderedBuffer);
+
+        const downloadUrl = URL.createObjectURL(wavBlob);
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = `FL_Mixdown_${Date.now()}.wav`;
+        a.click();
+        URL.revokeObjectURL(downloadUrl);
+        audioCtx.close();
+
+        showToast('Xuất file WAV thành công!', 'success');
+      } catch (err) {
+        showToast('Lỗi khi xuất: ' + err.message, 'error');
+      } finally {
+        dom.btnExportMix.disabled = false;
+      }
+    }
+
+    function audioBufferToWavBlob(buffer) {
+      const numOfChan = buffer.numberOfChannels;
+      const length = buffer.length * numOfChan * 2 + 44;
+      const out = new ArrayBuffer(length);
+      const view = new DataView(out);
+      const channels = [];
+      let sample, offset = 0, pos = 0;
+
+      const setUint16 = (d) => { view.setUint16(pos, d, true); pos += 2; };
+      const setUint32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
+
+      setUint32(0x46464952);
+      setUint32(length - 8);
+      setUint32(0x45564157);
+      setUint32(0x20746d66);
+      setUint32(16);
+      setUint16(1);
+      setUint16(numOfChan);
+      setUint32(buffer.sampleRate);
+      setUint32(buffer.sampleRate * 2 * numOfChan);
+      setUint16(numOfChan * 2);
+      setUint16(16);
+      setUint32(0x61746164);
+      setUint32(length - pos - 4);
+
+      for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
+
+      while (pos < length) {
+        for (let i = 0; i < numOfChan; i++) {
+          sample = Math.max(-1, Math.min(1, channels[i][offset]));
+          sample = (0.5 + sample < 0 ? sample * 32768 : sample * 32767) | 0;
+          view.setInt16(pos, sample, true);
+          pos += 2;
+        }
+        offset++;
+      }
+
+      return new Blob([out], { type: 'audio/wav' });
+    }
+
+    /**
+     * 8. GẮN SỰ KIỆN GIAO DIỆN & TƯƠNG TÁC
      */
     function setupEventListeners() {
       dom.btnPlayPause.addEventListener('click', togglePlayPause);
@@ -822,18 +944,27 @@
         applyEffectiveVolumes();
       });
 
+      // Tương tác nút bấm Mute, Solo, Đèn LED xanh lá FL Studio
       dom.tracksWrapper.addEventListener('click', (e) => {
+        const ledBtn = e.target.closest('.fl-led');
         const muteBtn = e.target.closest('.btn-mute');
         const soloBtn = e.target.closest('.btn-solo');
+
+        if (ledBtn && state.isReady) {
+          const id = ledBtn.dataset.id;
+          const track = state.tracks[id];
+          track.muted = !track.muted;
+          const mBtn = document.getElementById(`mute-${id}`);
+          if (mBtn) mBtn.classList.toggle('text-white', track.muted);
+          applyEffectiveVolumes();
+        }
 
         if (muteBtn && state.isReady) {
           const id = muteBtn.dataset.id;
           const track = state.tracks[id];
           track.muted = !track.muted;
-
           muteBtn.classList.toggle('bg-red-600', track.muted);
           muteBtn.classList.toggle('text-white', track.muted);
-          muteBtn.classList.toggle('border-red-400', track.muted);
           applyEffectiveVolumes();
         }
 
@@ -841,10 +972,8 @@
           const id = soloBtn.dataset.id;
           const track = state.tracks[id];
           track.soloed = !track.soloed;
-
           soloBtn.classList.toggle('bg-amber-500', track.soloed);
           soloBtn.classList.toggle('text-slate-950', track.soloed);
-          soloBtn.classList.toggle('border-amber-300', track.soloed);
           applyEffectiveVolumes();
         }
       });
@@ -864,12 +993,12 @@
           t.muted = false;
           t.soloed = false;
         });
-        document.querySelectorAll('.btn-mute').forEach(b => b.classList.remove('bg-red-600', 'text-white', 'border-red-400'));
-        document.querySelectorAll('.btn-solo').forEach(b => b.classList.remove('bg-amber-500', 'text-slate-950', 'border-amber-300'));
+        document.querySelectorAll('.btn-mute').forEach(b => b.classList.remove('bg-red-600', 'text-white'));
+        document.querySelectorAll('.btn-solo').forEach(b => b.classList.remove('bg-amber-500', 'text-slate-950'));
         applyEffectiveVolumes();
       });
 
-      dom.btnLoadDemo.addEventListener('click', () => generateAndLoadMockStems());
+      dom.btnMockData.addEventListener('click', () => generateAndLoadMockStems());
       dom.btnQuickDemo.addEventListener('click', () => generateAndLoadMockStems());
       dom.btnUploadModal.addEventListener('click', () => dom.uploadOverlay.classList.remove('hidden'));
       dom.btnCloseOverlay.addEventListener('click', () => dom.uploadOverlay.classList.add('hidden'));
@@ -877,7 +1006,7 @@
       dom.btnExportMix.addEventListener('click', exportFinalMixToWav);
 
       dom.fileInput.addEventListener('change', (e) => {
-        if (e.target.files.length > 0) handleFileUpload(e.target.files[0]);
+        if (e.target.files.length > 0) handleFileUploadNoLimit(e.target.files[0]);
       });
 
       ['dragenter', 'dragover'].forEach(evt => {
@@ -890,13 +1019,20 @@
       window.addEventListener('drop', (e) => {
         e.preventDefault();
         if (e.dataTransfer.files.length > 0) {
-          handleFileUpload(e.dataTransfer.files[0]);
+          handleFileUploadNoLimit(e.dataTransfer.files[0]);
         }
       });
     }
 
     function updateTimeDisplay(currentTime) {
-      dom.timeCurrent.textContent = formatTime(currentTime);
+      const mins = Math.floor(currentTime / 60);
+      const secs = Math.floor(currentTime % 60);
+      const ms = Math.floor((currentTime % 1) * 100);
+      const bar = Math.floor(currentTime / 1.84) + 1; // Ước lượng Bar tại 130 BPM
+      const beat = (Math.floor((currentTime % 1.84) / 0.46) % 4) + 1;
+
+      dom.lcdTimeDisplay.textContent = `${String(bar).padStart(2, '0')}:${String(beat).padStart(2, '0')} — ${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
+      
       if (state.duration > 0) {
         dom.masterSeek.value = Math.round((currentTime / state.duration) * 1000);
       }
@@ -904,35 +1040,34 @@
 
     function updatePlayButtonUI() {
       dom.btnPlayPause.innerHTML = state.isPlaying
-        ? '<i data-lucide="pause" class="w-5 h-5 fill-current"></i>'
-        : '<i data-lucide="play" class="w-5 h-5 fill-current"></i>';
+        ? '<i data-lucide="pause" class="w-4 h-4 fill-current"></i>'
+        : '<i data-lucide="play" class="w-4 h-4 fill-current"></i>';
       lucide.createIcons();
-    }
-
-    function formatTime(seconds) {
-      const mins = Math.floor(seconds / 60);
-      const secs = Math.floor(seconds % 60);
-      const ms = Math.floor((seconds % 1) * 100);
-      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(ms).padStart(2, '0')}`;
     }
 
     function showToast(message, type = 'info') {
       const colors = {
-        info: 'bg-slate-800 border-slate-600 text-slate-100',
-        success: 'bg-emerald-950/90 border-emerald-500 text-emerald-200',
-        error: 'bg-rose-950/90 border-rose-500 text-rose-200'
+        info: 'bg-[#252f36] border-[#3f4f5c] text-slate-100',
+        success: 'bg-[#183925] border-[#2e7d4c] text-emerald-200',
+        error: 'bg-[#401f22] border-[#8e3940] text-rose-200'
       };
 
       const toast = document.createElement('div');
-      toast.className = `px-4 py-3 rounded-lg border text-xs font-medium shadow-xl transition-all duration-300 ${colors[type]}`;
+      toast.className = `px-3.5 py-2.5 rounded border text-xs font-mono shadow-xl transition-all duration-300 ${colors[type]}`;
       toast.textContent = message;
       dom.toastContainer.appendChild(toast);
 
       setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
-      }, 4000);
+      }, 3500);
     }
   </script>
 </body>
 </html>
+"""
+
+with open("fl_studio_web_daw.html", "w", encoding="utf-8") as f:
+    f.write(daw_full_html)
+
+print("Saved fl_studio_web_daw.html successfully")
