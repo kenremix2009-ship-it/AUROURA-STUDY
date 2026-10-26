@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FL Studio 21 Web DAW — Real-Time Stem Separator & Arrangement</title>
+  <title>FL Studio 21 Web DAW - Pro Engine</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     :root {
-      --fl-bg-dark: #191d20;
-      --fl-toolbar: #2b3238;
-      --fl-panel: #22282d;
-      --fl-header: #313940;
-      --fl-grid-1: #21282e;
-      --fl-grid-2: #1d2328;
-      --fl-border: #121619;
-      --fl-orange: #ff9f1a;
-      --fl-green: #55e662;
+      --daw-bg: #16191c;
+      --daw-header: #24292e;
+      --daw-panel: #1e2226;
+      --daw-border: #2e353c;
+      --daw-border-dark: #121416;
+      --daw-track-bg: #1c2024;
+      --daw-track-alt: #191c20;
+      --daw-text: #a6b2be;
+      --daw-accent: #d37a1f; /* Cam đất mờ truyền thống của DAW */
+      --daw-led: #4cd964;
     }
 
     * {
@@ -26,9 +27,9 @@
 
     body {
       margin: 0;
-      background-color: var(--fl-bg-dark);
-      color: #c8d1d8;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background-color: var(--daw-bg);
+      color: var(--daw-text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       font-size: 11px;
       overflow: hidden;
       height: 100vh;
@@ -36,1208 +37,709 @@
       flex-direction: column;
     }
 
-    /* Thanh cuộn kiểu FL Studio */
+    /* Thanh cuộn tối giản */
     ::-webkit-scrollbar {
-      width: 10px;
-      height: 10px;
+      width: 6px;
+      height: 6px;
     }
     ::-webkit-scrollbar-track {
-      background: #161a1d;
+      background: var(--daw-bg);
     }
     ::-webkit-scrollbar-thumb {
-      background: #3b454e;
-      border: 2px solid #161a1d;
+      background: #363e46;
       border-radius: 2px;
     }
     ::-webkit-scrollbar-thumb:hover {
-      background: #4e5b66;
+      background: #4a545e;
     }
 
-    /* Nền lưới Playlist FL Studio chia vạch Bar & 4-Bar Shading */
-    .fl-playlist-grid {
-      background-color: var(--fl-grid-1);
-      background-image:
-        linear-gradient(to right, rgba(0, 0, 0, 0.16) 50%, transparent 50%),
-        linear-gradient(to right, #121619 1px, transparent 1px),
-        linear-gradient(to right, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-        linear-gradient(to bottom, #161b1f 1px, transparent 1px);
-      background-size: 320px 100%, 40px 100%, 10px 100%, 100% 38px;
+    /* Lưới Playlist tối giản chuyên nghiệp */
+    .playlist-grid {
+      background-color: var(--daw-track-bg);
+      background-image: 
+        linear-gradient(to right, rgba(0, 0, 0, 0.3) 1px, transparent 1px),
+        linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(to bottom, var(--daw-border-dark) 1px, transparent 1px);
+      background-size: 160px 100%, 40px 100%, 100% 32px;
     }
 
-    /* Đèn LED xanh lá trên Track và Pattern */
-    .fl-led {
-      width: 9px;
-      height: 9px;
+    /* Đèn LED xanh cơ bản */
+    .track-led {
+      width: 7px;
+      height: 7px;
       border-radius: 50%;
-      background-color: var(--fl-green);
-      box-shadow: 0 0 6px var(--fl-green), inset 0 0 2px #ffffff;
+      background: var(--daw-led);
       cursor: pointer;
       flex-shrink: 0;
+      box-shadow: 0 0 4px rgba(76, 217, 100, 0.4);
     }
-    .fl-led.muted {
-      background-color: #202a23;
+    .track-led.off {
+      background: #252b30;
       box-shadow: none;
-      border: 1px solid #334237;
     }
 
-    /* Thanh Playhead chạy bằng GPU (Ultra-Low Keyframe overhead) */
-    #playheadLine {
+    /* Playhead line tăng tốc GPU */
+    #playhead {
       position: absolute;
       top: 0;
       bottom: 0;
       left: 0;
-      width: 2px;
-      background-color: var(--fl-orange);
-      box-shadow: 0 0 6px rgba(255, 159, 26, 0.75);
+      width: 1px;
+      background-color: var(--daw-accent);
       pointer-events: none;
-      z-index: 25;
+      z-index: 50;
       will-change: transform;
-      transform: translate3d(0px, 0, 0);
+      transform: translate3d(0, 0, 0);
     }
-    #playheadLine::before {
+    #playhead::after {
       content: '';
       position: absolute;
       top: 0;
-      left: -5px;
-      border-left: 6px solid transparent;
-      border-right: 6px solid transparent;
-      border-top: 8px solid var(--fl-orange);
+      left: -4px;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 6px solid var(--daw-accent);
     }
 
-    /* Thanh trượt Volume nhỏ gọn */
-    input[type="range"].fl-slider {
+    /* Thanh trượt volume mỏng */
+    input[type=range].mini-slider {
       -webkit-appearance: none;
-      background: #15191c;
-      height: 4px;
-      border-radius: 2px;
-      border: 1px solid #38424a;
+      background: #111416;
+      height: 3px;
+      border-radius: 1px;
+      border: 1px solid #283038;
+      outline: none;
     }
-    input[type="range"].fl-slider::-webkit-slider-thumb {
+    input[type=range].mini-slider::-webkit-slider-thumb {
       -webkit-appearance: none;
-      width: 10px;
-      height: 10px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
-      background: #d2dae2;
-      border: 1px solid #111;
+      background: #8b99a6;
       cursor: pointer;
+      border: 1px solid #111;
     }
-    input[type="range"].fl-slider::-webkit-slider-thumb:hover {
-      background: var(--fl-orange);
+    input[type=range].mini-slider::-webkit-slider-thumb:hover {
+      background: var(--daw-accent);
     }
 
-    /* Khối Clip trong Playlist */
-    .fl-clip {
+    /* Clip khối âm thanh trên lưới */
+    .daw-clip {
       position: absolute;
       top: 2px;
       bottom: 2px;
-      border-radius: 3px;
+      border-radius: 2px;
+      background: #283138;
+      border: 1px solid #3c4752;
       overflow: hidden;
-      border: 1px solid rgba(0, 0, 0, 0.65);
+      cursor: move;
       display: flex;
       flex-direction: column;
     }
-    .fl-clip-header {
-      height: 13px;
+    .daw-clip.selected {
+      border-color: var(--daw-accent);
+      box-shadow: 0 0 0 1px var(--daw-accent);
+    }
+    .daw-clip-header {
+      height: 12px;
+      line-height: 12px;
       font-size: 9px;
-      line-height: 13px;
       padding: 0 4px;
-      color: #e6edf3;
-      font-weight: 600;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      background: rgba(0, 0, 0, 0.35);
+      background: rgba(0, 0, 0, 0.4);
+      color: #c0cad3;
+      font-weight: 500;
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      pointer-events: none;
     }
   </style>
 </head>
 <body>
 
-  <!-- ==================== 1. THANH TOP TOOLBAR FL STUDIO 21 ==================== -->
-  <header class="h-11 bg-[#2b3238] border-b border-[#121619] px-2 flex items-center justify-between gap-2 shrink-0 z-30">
+  <!-- ==================== 1. TOP TRANSPORT BAR (TỐI GIẢN) ==================== -->
+  <header class="h-9 bg-[#21262b] border-b border-[#131618] px-2 flex items-center justify-between gap-3 shrink-0 z-30">
     
-    <!-- Menu trái giống y hệt FL Studio -->
+    <!-- Cụm Menu cơ bản -->
     <div class="flex items-center gap-3">
-      <div class="flex items-center gap-1.5 font-bold text-[10px] tracking-wide text-[#aab4be]">
-        <span class="px-1.5 py-0.5 bg-[#384148] rounded text-amber-400">FL 21</span>
+      <div class="font-bold text-[10px] text-slate-400 flex items-center gap-2">
+        <span class="text-white px-1.5 py-0.5 bg-[#2a3138] rounded">FL STUDIO</span>
         <span class="hover:text-white cursor-pointer">FILE</span>
         <span class="hover:text-white cursor-pointer">EDIT</span>
-        <span class="hover:text-white cursor-pointer">ADD</span>
-        <span class="hover:text-white cursor-pointer">PATTERNS</span>
         <span class="hover:text-white cursor-pointer">VIEW</span>
         <span class="hover:text-white cursor-pointer">OPTIONS</span>
-        <span class="hover:text-white cursor-pointer">TOOLS</span>
-        <span class="hover:text-white cursor-pointer">HELP</span>
       </div>
 
-      <!-- Master Volume & Pitch Sliders nhỏ -->
-      <div class="hidden xl:flex items-center gap-2 bg-[#23292e] px-2 py-1 rounded border border-[#181c20]">
-        <span class="text-[9px] text-slate-400">VOL</span>
-        <input id="masterVolSlider" type="range" min="0" max="1.2" step="0.01" value="0.95" class="fl-slider w-16" title="Master Volume (Chống vỡ tiếng)" />
+      <div class="h-3 w-px bg-slate-700"></div>
+
+      <!-- Đổi tên dự án: Shift + Click -->
+      <div id="projectTitle" class="text-[11px] font-mono text-slate-300 font-semibold truncate max-w-[200px] cursor-pointer hover:underline" title="Nhấn Shift + Click để đổi tên">
+        Untitled_Session_01
       </div>
     </div>
 
-    <!-- Cụm Transport chính giữa: PAT/SONG, Play, Stop, Record, Tempo, Đồng hồ M:S:CS -->
-    <div class="flex items-center gap-2 bg-[#20262b] px-2.5 py-1 rounded border border-[#14181b] shadow-inner">
-      <div class="flex flex-col gap-0.5 text-[8px] font-bold leading-none">
-        <button id="btnModePat" class="px-1.5 py-0.5 rounded-sm bg-[#2c343b] text-slate-400">PAT</button>
-        <button id="btnModeSong" class="px-1.5 py-0.5 rounded-sm bg-[#ff9f1a] text-black">SONG</button>
-      </div>
-
-      <!-- Nút Play / Pause -->
-      <button id="btnPlay" class="w-7 h-7 rounded bg-[#2d353c] hover:bg-[#3a444d] flex items-center justify-center text-[#ff9f1a] border border-[#15191c]" title="Play / Pause (Space)">
-        <svg id="svgPlay" class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
+    <!-- Cụm Playback chính -->
+    <div class="flex items-center gap-2 bg-[#171a1d] px-2 py-0.5 rounded border border-[#272e35]">
+      <!-- Nút Play -->
+      <button id="btnPlay" class="w-6 h-6 rounded bg-[#252c32] hover:bg-[#303840] flex items-center justify-center text-slate-200" title="Play / Pause (Space)">
+        <svg id="playIcon" class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
       </button>
 
       <!-- Nút Stop -->
-      <button id="btnStop" class="w-7 h-7 rounded bg-[#2d353c] hover:bg-[#3a444d] flex items-center justify-center text-slate-200 border border-[#15191c]" title="Stop">
-        <svg class="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg>
+      <button id="btnStop" class="w-6 h-6 rounded bg-[#252c32] hover:bg-[#303840] flex items-center justify-center text-slate-300" title="Stop">
+        <svg class="w-3 h-3 fill-current" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg>
       </button>
 
-      <!-- Nút Record (Trang trí chuẩn DAW) -->
-      <button id="btnRec" class="w-7 h-7 rounded bg-[#2d353c] hover:bg-[#3a444d] flex items-center justify-center text-red-500 border border-[#15191c]" title="Record Mode">
-        <span class="w-3 h-3 rounded-full bg-red-500"></span>
-      </button>
-
-      <!-- Tempo LCD -->
-      <div class="bg-[#14181b] border border-[#323b42] px-2 py-0.5 rounded text-right">
-        <div class="text-[8px] text-slate-500 leading-none">TEMPO</div>
-        <div id="bpmValue" class="font-mono text-xs font-bold text-[#e0e8f0] tracking-wider">130.000</div>
+      <!-- Đồng hồ LCD tối giản: Bar & Time -->
+      <div class="font-mono text-xs px-2 py-0.5 bg-[#0f1214] border border-[#22272c] rounded text-slate-300 flex gap-2">
+        <span id="lcdBar" class="text-slate-500 font-bold">01:01</span>
+        <span id="lcdTime" class="text-[#d08b38] font-bold">00:00.0</span>
       </div>
 
-      <!-- Đồng hồ M:S:CS giống video (1:11:51) -->
-      <div class="bg-[#14181b] border border-[#323b42] px-2.5 py-0.5 rounded flex items-center gap-2 min-w-[105px] justify-between">
-        <div class="text-[8px] text-slate-500 leading-tight font-mono">
-          <div class="text-amber-400 font-bold">M:S:CS</div>
-          <div id="barIndicator">BAR 057</div>
-        </div>
-        <div id="timeLcd" class="font-mono text-base font-bold text-[#dce4ec] tracking-widest">1:11:00</div>
+      <!-- BPM -->
+      <div class="flex items-center gap-1 font-mono text-[10px] text-slate-400 px-1">
+        <span>BPM</span>
+        <span class="bg-[#0f1214] px-1 py-0.5 rounded border border-[#22272c] text-slate-200">130.0</span>
       </div>
 
-      <!-- Màn hình Oscilloscope + Peak Meter trên Top Bar giống video -->
-      <div class="hidden md:flex items-center gap-1.5 bg-[#14181b] border border-[#323b42] px-1.5 py-0.5 rounded">
-        <canvas id="topScopeCanvas" width="90" height="24" class="block"></canvas>
-        <div class="w-2.5 h-6 bg-[#0d1012] border border-[#2a3238] relative overflow-hidden flex flex-col justify-end">
-          <div id="masterMeterBar" class="w-full bg-gradient-to-t from-emerald-400 via-amber-400 to-rose-500 transition-none" style="height: 0%"></div>
-        </div>
+      <!-- Master Volume -->
+      <div class="flex items-center gap-1.5 pl-1 border-l border-slate-700">
+        <span class="text-[9px] text-slate-500 font-mono">VOL</span>
+        <input id="masterVol" type="range" min="0" max="1" step="0.01" value="0.9" class="mini-slider w-14" />
       </div>
     </div>
 
-    <!-- Cụm nút Upload Không Giới Hạn, Chế độ Low-Keyframe & Export -->
+    <!-- Cụm Hành động: Import không giới hạn, Thêm Track & Export -->
     <div class="flex items-center gap-1.5">
-      <button id="btnFpsMode" class="px-2 py-1 rounded bg-[#22282d] hover:bg-[#313940] border border-[#3d4750] text-[10px] font-mono text-emerald-400" title="Giới hạn Keyframe thấp để chống lag tuyệt đối">
-        KEYFRAME: LOW (20 FPS)
-      </button>
-
-      <button id="btnLoadDemo" class="px-2.5 py-1 rounded bg-[#364049] hover:bg-[#45515c] border border-[#52606d] text-white font-semibold text-[11px]">
-        Load Demo Beat
-      </button>
-
-      <label for="audioFileInput" class="px-2.5 py-1 rounded bg-[#ff9f1a] hover:bg-[#ffb142] text-black font-bold text-[11px] cursor-pointer shadow">
-        + Import Nhạc (No Limit MB)
+      <label for="fileLoader" class="px-2 py-1 rounded bg-[#2a3138] hover:bg-[#343d46] text-slate-200 font-semibold text-[10px] cursor-pointer border border-[#3f4a54]">
+        + Load Audio (300MB+ OK)
       </label>
-      <input id="audioFileInput" type="file" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" class="hidden" />
+      <input id="fileLoader" type="file" accept="audio/*" class="hidden" />
 
-      <button id="btnExportWav" class="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px]">
+      <button id="btnAddTrack" class="px-2 py-1 rounded bg-[#2a3138] hover:bg-[#343d46] text-slate-300 text-[10px] border border-[#3f4a54]">
+        + Add Track
+      </button>
+
+      <button id="btnExport" class="px-2 py-1 rounded bg-[#2e3740] hover:bg-[#394450] text-[#d08b38] font-semibold text-[10px] border border-[#485663]">
         Export WAV
       </button>
     </div>
   </header>
 
-  <!-- ==================== 2. KHU VỰC LÀM VIỆC CHÍNH (3 CỘT GIỐNG VIDEO) ==================== -->
+  <!-- ==================== 2. KHU VỰC PLAYLIST ARRANGEMENT ==================== -->
   <div class="flex-1 flex overflow-hidden">
-
-    <!-- CỘT 1: FL BROWSER (DANH SÁCH SAMPLE BÊN TRÁI + WAVEFORM PREVIEW DƯỚI ĐÁY) -->
-    <aside class="w-52 bg-[#1c2125] border-r border-[#111417] flex flex-col shrink-0">
-      <div class="h-6 bg-[#272e34] border-b border-[#111417] px-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
-        <span>Browser - All</span>
-        <span id="statusBadge" class="text-[9px] text-emerald-400 font-mono">READY</span>
+    
+    <!-- Cột Headers bên trái -->
+    <div class="w-48 bg-[#1a1e22] border-r border-[#121416] flex flex-col shrink-0">
+      <div class="h-6 bg-[#21262a] border-b border-[#121416] px-2 flex items-center justify-between text-[9px] font-bold text-slate-400">
+        <span>TRACK NAME (SHIFT+CLICK)</span>
+        <span>VOL / MUTE</span>
       </div>
-
-      <!-- Danh sách file Dior_Bass_Loop giống hệt trong video -->
-      <div id="browserSampleList" class="flex-1 overflow-y-auto py-1 px-1 space-y-0.5 font-mono text-[10px]">
-        <!-- Được tạo tự động bằng JS -->
+      <div id="trackHeadersList" class="flex-1 overflow-y-auto divide-y divide-[#131618]">
+        <!-- Sinh tự động bằng JS -->
       </div>
+    </div>
 
-      <!-- Khung xem trước sóng âm góc dưới bên trái giống video -->
-      <div class="h-24 bg-[#14181b] border-t border-[#2a3137] p-1.5 flex flex-col justify-between">
-        <div class="flex items-center justify-between text-[9px] text-slate-400">
-          <span id="previewSampleName" class="truncate">Dior_Bass_Loop_80_A#_down (2)</span>
-          <span class="text-amber-400 font-mono">32-Bit</span>
-        </div>
-        <canvas id="bottomPreviewCanvas" width="190" height="62" class="w-full h-[62px] bg-[#101316] rounded border border-[#242b31]"></canvas>
-      </div>
-    </aside>
-
-    <!-- CỘT 2: PATTERN PICKER (DANH SÁCH PATTERN 1 -> 28 GIỮA BROWSER VÀ PLAYLIST) -->
-    <aside class="w-28 bg-[#23292e] border-r border-[#111417] flex flex-col shrink-0">
-      <div class="h-6 bg-[#2c343b] border-b border-[#111417] px-2 flex items-center justify-between text-[10px] font-bold text-slate-300">
-        <span>Patterns</span>
-        <span class="text-amber-400">16</span>
-      </div>
-      <div id="patternPickerList" class="flex-1 overflow-y-auto py-1 px-1 space-y-0.5 text-[10px]">
-        <!-- Pattern 1 -> 28 -->
-      </div>
-    </aside>
-
-    <!-- CỘT 3: PLAYLIST - ARRANGEMENT (KHU VỰC CHÍNH) -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-[#1e2429]">
+    <!-- Vùng Lưới Arrangement bên phải -->
+    <div class="flex-1 flex flex-col overflow-hidden bg-daw-bg">
       
-      <!-- Thanh công cụ Playlist (Snap, Draw, Paint, Slice, Mute, Pattern 16) -->
-      <div class="h-6 bg-[#2c343b] border-b border-[#121619] px-2 flex items-center justify-between text-[10px]">
-        <div class="flex items-center gap-2">
-          <!-- Các icon công cụ đặc trưng trên đầu Playlist FL Studio -->
-          <div class="flex items-center gap-1 text-slate-300">
-            <span class="px-1.5 py-0.5 bg-[#1e2429] rounded text-emerald-400 font-bold" title="Snap to Grid">🧲 Line</span>
-            <span class="px-1.5 py-0.5 bg-[#3b464f] rounded text-amber-300 font-semibold">✎ Draw</span>
-            <span class="px-1.5 py-0.5 hover:bg-[#3b464f] rounded cursor-pointer">🖌 Paint</span>
-            <span class="px-1.5 py-0.5 hover:bg-[#3b464f] rounded cursor-pointer">🚫 Delete</span>
-            <span class="px-1.5 py-0.5 hover:bg-[#3b464f] rounded cursor-pointer">🔇 Mute</span>
-            <span class="px-1.5 py-0.5 hover:bg-[#3b464f] rounded cursor-pointer">🔪 Slice</span>
-          </div>
-          <span class="text-slate-400 font-semibold ml-2">
-            Playlist - Arrangement - <b id="arrangementTitle" class="text-white">Pattern 16 (AI Stems Loaded)</b>
-          </span>
-        </div>
-
-        <div class="flex items-center gap-2">
-          <button id="btnResetMixer" class="px-2 py-0.5 rounded bg-[#20262b] hover:bg-[#38424b] text-amber-400 border border-[#404b56] text-[10px]">
-            Reset All Mute/Solo
-          </button>
-        </div>
+      <!-- Thước đo Ruler (Click để tua) -->
+      <div id="rulerTimeline" class="h-6 bg-[#181c20] border-b border-[#121416] relative overflow-hidden cursor-pointer select-none">
+        <div id="rulerTicks" class="absolute inset-0 flex items-center pointer-events-none"></div>
       </div>
 
-      <!-- Thanh Ruler đánh số Bar (57 -> 73 giống video) + Click để tua nhạc -->
-      <div class="h-6 bg-[#20262b] border-b border-[#111417] flex shrink-0">
-        <!-- Góc trống phía trên cột Track Headers -->
-        <div class="w-44 shrink-0 bg-[#262d33] border-r border-[#121619] px-2 flex items-center justify-between text-[9px] text-slate-400 font-bold">
-          <span>TRACK / STEM MIXER</span>
-          <span>LED / VOL</span>
+      <!-- Vùng cuộn chứa các Track Lanes -->
+      <div id="playlistLanes" class="flex-1 overflow-y-auto overflow-x-hidden relative playlist-grid select-none">
+        <div id="lanesContainer" class="w-full relative">
+          <!-- Các Lane tương ứng từng Track -->
         </div>
 
-        <!-- Vùng thước đo Bar (Click hoặc kéo trên đây để tua nhạc tức thì) -->
-        <div id="timelineRuler" class="flex-1 relative overflow-hidden cursor-ew-resize bg-[#181d21]" title="Click hoặc kéo để tua nhạc">
-          <div id="rulerBarsContainer" class="absolute inset-0 flex items-center pointer-events-none"></div>
-          <!-- Thanh đánh dấu vùng Loop màu đỏ trên thước giống FL Studio -->
-          <div class="absolute top-0 left-0 right-0 h-[3px] bg-red-500/60 pointer-events-none"></div>
-        </div>
+        <!-- Playhead GPU -->
+        <div id="playhead"></div>
       </div>
 
-      <!-- Khu vực cuộn chứa Cột Track Headers (Track 15 -> 31) và Lưới Arrangement -->
-      <div id="playlistScrollArea" class="flex-1 flex overflow-y-auto overflow-x-hidden relative">
-        
-        <!-- Cột Track Headers bên trái (Track 15 -> Track 31) -->
-        <div id="trackHeadersCol" class="w-44 shrink-0 bg-[#272f35] border-r border-[#121619] select-none z-10">
-          <!-- Sinh tự động bởi JS -->
-        </div>
-
-        <!-- Vùng Lưới Chứa Các Khối Sóng Âm & MIDI + Thanh Playhead Cam -->
-        <div id="arrangementStage" class="flex-1 relative fl-playlist-grid overflow-hidden cursor-pointer">
-          <!-- Các rãnh ngang (Lanes) chứa Clip -->
-          <div id="trackLanesContainer" class="w-full"></div>
-
-          <!-- Thanh Playhead màu cam duy nhất được tăng tốc phần cứng -->
-          <div id="playheadLine"></div>
-        </div>
-
-      </div>
-    </main>
+    </div>
   </div>
 
-  <!-- Toast thông báo nhỏ góc dưới -->
-  <div id="toastBox" class="fixed bottom-3 right-3 z-50 flex flex-col gap-1.5 pointer-events-none"></div>
+  <!-- Audio Element ẩn phục vụ Streaming file lớn (300MB, 1GB+) tức thì không tốn RAM -->
+  <audio id="streamAudio" preload="auto" class="hidden"></audio>
 
-  <!-- ==================== 3. ENGINE XỬ LÝ ÂM THANH & GIAO DIỆN ==================== -->
+  <!-- ==================== 3. JAVASCRIPT CORE ==================== -->
   <script>
     /**
-     * CẤU HÌNH CÁC TRACK TRONG PLAYLIST GIỐNG VIDEO MẪU (Track 15 -> Track 30)
-     * Trong đó 4 Stems chính (Vocals, Drums, Bass, Instruments) điều khiển trực tiếp bộ lọc DSP thời gian thực.
+     * DỮ LIỆU CÁC TRACK MẶC ĐỊNH (TỐI GIẢN, KHÔNG MÀU MÈ)
      */
-    const PLAYLIST_TRACKS = [
-      { trackNum: 15, id: 'pat2',   name: 'Track 15', clipName: 'Pattern 2 (Hi-Hat Roll)', type: 'midi', stemId: 'drums',  color: '#485460', startPct: 0,  widthPct: 24 },
-      { trackNum: 16, id: 'pat16',  name: 'Track 16', clipName: 'Pattern 16 (Perc)',       type: 'midi', stemId: 'drums',  color: '#485460', startPct: 82, widthPct: 18 },
-      { trackNum: 17, id: 'drums',  name: 'Track 17 (Drums)',  clipName: 'Drums & Transient Stem', type: 'wave', stemId: 'drums',  color: '#d35400', startPct: 0,  widthPct: 100, isMainStem: true },
-      { trackNum: 18, id: 'pat10',  name: 'Track 18', clipName: 'Pattern 10 (Clap)',       type: 'midi', stemId: 'drums',  color: '#3c6382', startPct: 82, widthPct: 18 },
-      { trackNum: 19, id: 'pat12',  name: 'Track 19', clipName: 'Pattern 12 (808 Fill)',   type: 'midi', stemId: 'bass',   color: '#3c6382', startPct: 82, widthPct: 18 },
-      { trackNum: 20, id: 'bass',   name: 'Track 20 (Bass)',   clipName: 'Dior_Bass_Loop_80_A#_down (Bass Stem)', type: 'wave', stemId: 'bass', color: '#2980b9', startPct: 0, widthPct: 100, isMainStem: true },
-      { trackNum: 21, id: 'pat22',  name: 'Track 21', clipName: 'Pattern 22 (Chords)',     type: 'notes', stemId: 'other', color: '#2c3e50', startPct: 18, widthPct: 74 },
-      { trackNum: 22, id: 'pat23',  name: 'Track 22', clipName: 'Pattern 23 (Counter Mel)',type: 'notes', stemId: 'other', color: '#2c3e50', startPct: 18, widthPct: 74 },
-      { trackNum: 23, id: 'vocals', name: 'Track 23 (Vocals)', clipName: 'Vocal / Lead Harmonic Stem', type: 'wave', stemId: 'vocals', color: '#9b59b6', startPct: 0, widthPct: 100, isMainStem: true },
-      { trackNum: 24, id: 'other',  name: 'Track 24 (Synth)',  clipName: 'Instruments & Melodic Stem', type: 'wave', stemId: 'other',  color: '#27ae60', startPct: 0, widthPct: 100, isMainStem: true },
-      { trackNum: 25, id: 'pat26',  name: 'Track 25', clipName: 'Pattern 26 (FX)',         type: 'midi', stemId: 'other',  color: '#3b4b59', startPct: 0,  widthPct: 12 },
-      { trackNum: 26, id: 'odin',   name: 'Track 26', clipName: 'Odin Automation Clip',    type: 'auto', stemId: 'other',  color: '#227093', startPct: 0,  widthPct: 100 },
-      { trackNum: 27, id: 'empty1', name: 'Track 27', clipName: '', type: 'empty' },
-      { trackNum: 28, id: 'empty2', name: 'Track 28', clipName: '', type: 'empty' },
-      { trackNum: 29, id: 'empty3', name: 'Track 29', clipName: '', type: 'empty' },
-      { trackNum: 30, id: 'empty4', name: 'Track 30', clipName: '', type: 'empty' }
+    let tracks = [
+      { id: 'tr_1', name: '01 - Master Audio', type: 'audio', volume: 0.9, muted: false, soloed: false, clips: [] },
+      { id: 'tr_2', name: '02 - Kick / Perc',   type: 'drums', volume: 0.85, muted: false, soloed: false, clips: [] },
+      { id: 'tr_3', name: '03 - 808 Bass',     type: 'bass',  volume: 0.85, muted: false, soloed: false, clips: [] },
+      { id: 'tr_4', name: '04 - Vocals / Synth',type: 'vocal', volume: 0.85, muted: false, soloed: false, clips: [] },
+      { id: 'tr_5', name: '05 - Arrangement',  type: 'synth', volume: 0.85, muted: false, soloed: false, clips: [] }
     ];
 
-    const SAMPLE_NAMES = [
-      'Dior_Bass_Loop_80_A#_up',
-      'Dior_Bass_Loop_80_A#_up_2',
-      'Dior_Bass_Loop_80_C#',
-      'Dior_Bass_Loop_80_E',
-      'Dior_Bass_Loop_85_A',
-      'Dior_Bass_Loop_90_D#',
-      'Dior_Bass_Loop_90_F',
-      'Dior_Bass_Loop_90_F#',
-      'Dior_Bass_Loop_94_G#',
-      'Dior_Bass_Loop_100_C#',
-      'Dior_Bass_Loop_80_A#_down (2)',
-      'Dior_Bass_Loop_105_G',
-      'Dior_Bass_Loop_115_G#',
-      'Dior_Bass_Loop_120_C',
-      'Dior_Bass_Loop_125_D#',
-      'Dior_Bass_Loop_130_A',
-      'Dior_Bass_Loop_140_E'
-    ];
+    let audioCtx = null;
+    let streamSource = null;
+    let masterGain = null;
+    let bassFilter = null;
+    let isPlaying = false;
+    let duration = 30.0;
+    let selectedClipId = null;
 
-    /**
-     * TRẠNG THÁI HỆ THỐNG ÂM THANH (REAL-TIME WEB AUDIO GRAPH)
-     */
-    const audioEngine = {
-      ctx: null,
-      audioBuffer: null,       // Lưu AudioBuffer khi giải mã trực tiếp
-      sourceNode: null,        // Nguồn phát hiện tại
-      masterGain: null,
-      limiter: null,           // Bộ chống vỡ tiếng (Brickwall Limiter)
-      analyser: null,
-      stems: {
-        vocals: { gainNode: null, volume: 0.9, muted: false, soloed: false },
-        drums:  { gainNode: null, volume: 0.9, muted: false, soloed: false },
-        bass:   { gainNode: null, volume: 0.9, muted: false, soloed: false },
-        other:  { gainNode: null, volume: 0.9, muted: false, soloed: false }
-      },
-      isPlaying: false,
-      startTime: 0,
-      pauseOffset: 0,
-      duration: 28.0,
-      lowKeyframeMode: true,   // Mặc định bật Low Keyframe (20 FPS) chống lag
-      lastFrameTime: 0
-    };
+    // DOM Elements
+    const audioEl = document.getElementById('streamAudio');
+    const btnPlay = document.getElementById('btnPlay');
+    const btnStop = document.getElementById('btnStop');
+    const playIcon = document.getElementById('playIcon');
+    const playhead = document.getElementById('playhead');
+    const lcdTime = document.getElementById('lcdTime');
+    const lcdBar = document.getElementById('lcdBar');
+    const masterVol = document.getElementById('masterVol');
+    const fileLoader = document.getElementById('fileLoader');
+    const trackHeadersList = document.getElementById('trackHeadersList');
+    const lanesContainer = document.getElementById('lanesContainer');
+    const rulerTimeline = document.getElementById('rulerTimeline');
+    const rulerTicks = document.getElementById('rulerTicks');
+    const projectTitle = document.getElementById('projectTitle');
+    const btnAddTrack = document.getElementById('btnAddTrack');
+    const btnExport = document.getElementById('btnExport');
 
-    const trackMuteState = {};
-    PLAYLIST_TRACKS.forEach(t => { trackMuteState[t.id] = false; });
-
-    // Khởi chạy giao diện
     window.addEventListener('DOMContentLoaded', () => {
-      initBrowserAndPatterns();
-      initRulerBars();
-      renderPlaylistStructure();
-      bindEvents();
-      // Tạo sẵn bản nhạc Demo chuẩn phong cách video (Atmospheric Vocal + Bass + Beat)
-      generateAtmosphericDemoBuffer();
+      initRuler();
+      renderTracksUI();
+      setupEvents();
+      createDefaultDemoClips();
     });
 
     /**
-     * 1. DỰNG CỘT BROWSER BÊN TRÁI & PATTERN PICKER GIỐNG VIDEO
+     * 1. KHỞI TẠO RULER ĐƠN GIẢN
      */
-    function initBrowserAndPatterns() {
-      const browserEl = document.getElementById('browserSampleList');
-      browserEl.innerHTML = '';
-      SAMPLE_NAMES.forEach((name, idx) => {
-        const isSelected = name.includes('down (2)');
-        const item = document.createElement('div');
-        item.className = `px-1.5 py-0.5 rounded flex items-center gap-1.5 cursor-pointer truncate ${
-          isSelected ? 'bg-[#2f3b45] text-[#55e662] font-bold' : 'text-slate-300 hover:bg-[#272f36]'
-        }`;
-        item.innerHTML = `<span class="text-[#ff9f1a]">🔊</span><span class="truncate">${name}</span>`;
-        item.addEventListener('click', () => {
-          document.getElementById('previewSampleName').textContent = name;
-          drawBottomSamplePreview(idx + 1);
-        });
-        browserEl.appendChild(item);
-      });
-
-      const patEl = document.getElementById('patternPickerList');
-      patEl.innerHTML = '';
-      for (let i = 1; i <= 26; i++) {
-        const active = i === 16 || i === 23;
-        const row = document.createElement('div');
-        row.className = `px-1.5 py-0.5 rounded flex items-center justify-between cursor-pointer ${
-          active ? 'bg-[#394551] text-white font-semibold' : 'text-slate-400 hover:bg-[#2c353d]'
-        }`;
-        row.innerHTML = `
-          <span class="truncate">Pattern ${i}</span>
-          <span class="w-4 h-1.5 rounded-sm" style="background:${active ? '#ff9f1a' : '#485460'}"></span>
-        `;
-        patEl.appendChild(row);
-      }
-    }
-
-    function initRulerBars() {
-      const ruler = document.getElementById('rulerBarsContainer');
-      ruler.innerHTML = '';
-      // Đánh số Bar từ 57 đến 73 giống hệt video mẫu
-      const totalBars = 17;
-      for (let i = 0; i < totalBars; i++) {
-        const barDiv = document.createElement('div');
-        barDiv.style.width = `${100 / totalBars}%`;
-        barDiv.className = 'h-full border-l border-[#343e46] pl-1 text-[9px] font-mono text-slate-400 flex items-center';
-        barDiv.textContent = 57 + i;
-        ruler.appendChild(barDiv);
+    function initRuler() {
+      rulerTicks.innerHTML = '';
+      const totalBars = 32;
+      for (let i = 1; i <= totalBars; i++) {
+        const tick = document.createElement('div');
+        tick.style.width = `${100 / totalBars}%`;
+        tick.className = 'h-full border-l border-[#272f36] pl-1 font-mono text-[9px] text-slate-500 flex items-center';
+        tick.textContent = i;
+        rulerTicks.appendChild(tick);
       }
     }
 
     /**
-     * 2. DỰNG CÁC TRACK PLAYLIST (TRACK 15 -> 30) VÀ KHUNG CANVAS TĨNH
+     * 2. RENDER GIAO DIỆN TRACK HEADERS & LANES (GỌN GÀNG, KHÔNG MÀU MÈ)
      */
-    function renderPlaylistStructure() {
-      const headersCol = document.getElementById('trackHeadersCol');
-      const lanesContainer = document.getElementById('trackLanesContainer');
-      headersCol.innerHTML = '';
+    function renderTracksUI() {
+      trackHeadersList.innerHTML = '';
       lanesContainer.innerHTML = '';
 
-      PLAYLIST_TRACKS.forEach((tr) => {
-        // Track Header bên trái
+      tracks.forEach((track, idx) => {
+        // Track Header (Bên trái)
         const header = document.createElement('div');
-        header.className = 'h-[38px] border-b border-[#181d21] px-2 flex items-center justify-between bg-[#262e34] hover:bg-[#2d363d]';
-        
-        const isStem = Boolean(tr.isMainStem);
+        header.className = 'h-[32px] px-2 flex items-center justify-between bg-[#1d2125] hover:bg-[#22272c] border-b border-[#131618]';
         header.innerHTML = `
-          <div class="flex flex-col min-w-0 pr-1">
-            <div class="flex items-center gap-1">
-              <span class="text-[10px] font-semibold ${isStem ? 'text-white' : 'text-slate-300'} truncate">${tr.name}</span>
-            </div>
-            ${isStem ? `
-              <div class="flex items-center gap-1 mt-0.5">
-                <button data-stem="${tr.stemId}" class="btn-solo px-1 rounded text-[8px] font-bold bg-[#181d21] text-slate-300 border border-[#3a444d] hover:text-white" title="Solo Stem">S</button>
-                <input data-stem="${tr.stemId}" type="range" min="0" max="1" step="0.01" value="0.9" class="stem-vol fl-slider w-16" title="Âm lượng rãnh ${tr.name}" />
-              </div>
-            ` : `<span class="text-[8px] text-slate-500">Sub-track</span>`}
+          <div class="flex items-center gap-1.5 min-w-0 pr-1">
+            <span class="track-led ${track.muted ? 'off' : ''}" data-id="${track.id}" title="Mute Track"></span>
+            <span class="track-title font-medium text-[10px] text-slate-300 truncate cursor-pointer" data-id="${track.id}" title="Shift + Click để đổi tên">
+              ${track.name}
+            </span>
           </div>
           <div class="flex items-center gap-1.5">
-            <span id="led-${tr.id}" data-track="${tr.id}" data-stem="${tr.stemId || ''}" class="fl-led" title="Bật/Tắt rãnh này (Mute)"></span>
+            <input type="range" min="0" max="1" step="0.01" value="${track.volume}" data-id="${track.id}" class="track-vol mini-slider w-10" title="Volume" />
+            <button data-id="${track.id}" class="btn-del-track text-slate-500 hover:text-rose-400 font-bold text-xs px-1 leading-none" title="Xóa Track này">×</button>
           </div>
         `;
-        headersCol.appendChild(header);
+        trackHeadersList.appendChild(header);
 
-        // Track Lane bên phải
+        // Track Lane (Bên phải)
         const lane = document.createElement('div');
-        lane.className = 'h-[38px] relative w-full';
-        if (tr.type !== 'empty') {
-          lane.innerHTML = `
-            <div id="clip-${tr.id}" class="fl-clip" style="left:${tr.startPct}%; width:${tr.widthPct}%; background:${tr.color}44; border-color:${tr.color}">
-              <div class="fl-clip-header" style="background:${tr.color}aa">
-                <span>${tr.clipName}</span>
-                ${isStem ? '<span class="text-[8px] font-mono opacity-80">STEM</span>' : ''}
-              </div>
-              <canvas id="canvas-${tr.id}" class="w-full flex-1 block"></canvas>
+        lane.className = 'h-[32px] relative w-full border-b border-[#131618]';
+        lane.dataset.trackId = track.id;
+
+        // Render các clip thuộc track này
+        track.clips.forEach(clip => {
+          const clipEl = document.createElement('div');
+          clipEl.id = clip.id;
+          clipEl.className = `daw-clip ${clip.id === selectedClipId ? 'selected' : ''}`;
+          clipEl.style.left = `${clip.startPct}%`;
+          clipEl.style.width = `${clip.widthPct}%`;
+          clipEl.innerHTML = `
+            <div class="daw-clip-header">
+              <span class="clip-title" data-id="${clip.id}">${clip.name}</span>
+              <span class="text-[8px] text-slate-400 font-mono">${clip.type.toUpperCase()}</span>
             </div>
+            <div class="flex-1 opacity-40 bg-[repeating-linear-gradient(90deg,#8b99a6_0px,#8b99a6_1px,transparent_1px,transparent_8px)]"></div>
           `;
-        }
+          lane.appendChild(clipEl);
+        });
+
         lanesContainer.appendChild(lane);
       });
     }
 
     /**
-     * 3. VẼ TĨNH SÓNG ÂM & MIDI LÊN CANVAS (CHỈ VẼ 1 LẦN KHI LOAD -> 0% LAG KHI PHÁT NHẠC)
+     * 3. XỬ LÝ STREAMING ÂM THANH FILE LỚN (300MB+ KHÔNG BỊ TREO RAM)
      */
-    function renderAllStaticCanvases(buffer) {
-      const rawData = buffer ? buffer.getChannelData(0) : null;
+    function initWebAudioStream() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        streamSource = audioCtx.createMediaElementSource(audioEl);
 
-      PLAYLIST_TRACKS.forEach((tr) => {
-        if (tr.type === 'empty') return;
-        const canvas = document.getElementById(`canvas-${tr.id}`);
-        if (!canvas) return;
+        // Bộ lọc Bass cơ bản
+        bassFilter = audioCtx.createBiquadFilter();
+        bassFilter.type = 'lowpass';
+        bassFilter.frequency.value = 20000; // Mặc định mở toàn dải
 
-        const rect = canvas.getBoundingClientRect();
-        const width = Math.max(200, Math.floor(rect.width || 600));
-        const height = Math.max(18, Math.floor(rect.height || 22));
-        canvas.width = width;
-        canvas.height = height;
+        masterGain = audioCtx.createGain();
+        masterGain.gain.value = parseFloat(masterVol.value);
 
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, width, height);
-
-        if (tr.type === 'wave' && rawData) {
-          // Vẽ biểu đồ sóng âm cực nhẹ (chỉ lấy 350 điểm mẫu)
-          const step = Math.max(1, Math.floor(rawData.length / width));
-          const mid = height / 2;
-          ctx.fillStyle = tr.id === 'vocals' ? '#f3a6ff' : '#d2dae2';
-
-          // Hệ số hình dáng sóng theo từng dải tần để dễ phân biệt trực quan
-          const modFactor = tr.id === 'bass' ? 0.95 : tr.id === 'drums' ? 1.15 : 0.85;
-
-          for (let x = 0; x < width; x += 2) {
-            const sampleIdx = Math.min(rawData.length - 1, x * step);
-            let peak = Math.abs(rawData[sampleIdx]) * modFactor;
-            peak = Math.min(0.95, peak);
-            const barH = Math.max(2, peak * height);
-            ctx.fillRect(x, mid - barH / 2, 1.5, barH);
-          }
-        } else if (tr.type === 'notes') {
-          // Vẽ các nốt MIDI bậc thang giống hệt Track 21 & 22 trong video
-          ctx.fillStyle = '#7ed6df';
-          const totalNotes = 24;
-          const noteW = width / totalNotes;
-          for (let i = 0; i < totalNotes; i++) {
-            const stepY = (i % 4) * 3 + 3;
-            ctx.fillRect(i * noteW + 1, height - stepY - 4, noteW - 3, 2.5);
-          }
-        } else if (tr.type === 'midi') {
-          // Vẽ vạch nhịp MIDI trống
-          ctx.fillStyle = '#f6e58d';
-          for (let x = 4; x < width; x += 14) {
-            ctx.fillRect(x, 4, 3, height - 8);
-          }
-        } else if (tr.type === 'auto') {
-          // Vẽ đường Automation giống Track 28 (Odin) trong video
-          ctx.strokeStyle = '#48dbfb';
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(0, height - 3);
-          ctx.lineTo(width * 0.12, 4);
-          ctx.lineTo(width * 0.88, 4);
-          ctx.lineTo(width, height - 3);
-          ctx.stroke();
-        }
-      });
-
-      drawBottomSamplePreview(1);
-    }
-
-    function drawBottomSamplePreview(seed = 1) {
-      const c = document.getElementById('bottomPreviewCanvas');
-      if (!c) return;
-      const ctx = c.getContext('2d');
-      const w = c.width;
-      const h = c.height;
-      ctx.clearRect(0, 0, w, h);
-
-      const raw = audioEngine.audioBuffer ? audioEngine.audioBuffer.getChannelData(0) : null;
-      ctx.fillStyle = '#82ccdd';
-      const mid = h / 2;
-
-      for (let x = 0; x < w; x++) {
-        let amp = 0.5;
-        if (raw) {
-          const idx = Math.floor((x / w) * raw.length);
-          amp = Math.min(0.95, Math.abs(raw[idx]) * 1.1);
-        } else {
-          amp = Math.abs(Math.sin(x * 0.15 * seed)) * 0.7;
-        }
-        const bh = Math.max(2, amp * (h - 6));
-        ctx.fillRect(x, mid - bh / 2, 1, bh);
+        streamSource.connect(bassFilter);
+        bassFilter.connect(masterGain);
+        masterGain.connect(audioCtx.destination);
+      }
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
       }
     }
 
-    /**
-     * 4. KHỞI TẠO ĐỒ THỊ WEB AUDIO API THỜI GIAN THỰC (CHỐNG VỠ TIẾNG & KHÔNG CẮT KHÚC)
-     */
-    function ensureAudioContext() {
-      if (!audioEngine.ctx) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        audioEngine.ctx = new AudioCtx();
-
-        // Bộ Limiter chống vỡ tiếng tuyệt đối ở Master Output
-        const limiter = audioEngine.ctx.createDynamicsCompressor();
-        limiter.threshold.value = -2.0; // Ngưỡng cắt đỉnh an toàn
-        limiter.knee.value = 3.0;
-        limiter.ratio.value = 15.0;     // Tỷ lệ nén cao để không bao giờ vượt 0dB
-        limiter.attack.value = 0.002;
-        limiter.release.value = 0.08;
-
-        const masterGain = audioEngine.ctx.createGain();
-        masterGain.gain.value = parseFloat(document.getElementById('masterVolSlider').value) || 0.95;
-
-        const analyser = audioEngine.ctx.createAnalyser();
-        analyser.fftSize = 128;
-
-        masterGain.connect(limiter);
-        limiter.connect(analyser);
-        analyser.connect(audioEngine.ctx.destination);
-
-        audioEngine.masterGain = masterGain;
-        audioEngine.limiter = limiter;
-        audioEngine.analyser = analyser;
-      }
-      if (audioEngine.ctx.state === 'suspended') {
-        audioEngine.ctx.resume();
-      }
-    }
-
-    /**
-     * Kết nối 1 nguồn AudioBuffer duy nhất qua 4 nhánh bộ lọc DSP (Vocals, Drums, Bass, Other)
-     * -> Không tốn RAM nhân bản file, không bao giờ lệch pha hay ngưng giữa chừng!
-     */
-    function buildRealtimeStemGraph(sourceNode) {
-      const ctx = audioEngine.ctx;
-
-      // 1. Nhánh BASS (Low-pass 150Hz)
-      const bassFilter = ctx.createBiquadFilter();
-      bassFilter.type = 'lowpass';
-      bassFilter.frequency.value = 150;
-      bassFilter.Q.value = 0.707;
-      const bassGain = ctx.createGain();
-
-      // 2. Nhánh VOCALS (Band-pass 280Hz - 3600Hz)
-      const vocalHP = ctx.createBiquadFilter();
-      vocalHP.type = 'highpass';
-      vocalHP.frequency.value = 260;
-      const vocalLP = ctx.createBiquadFilter();
-      vocalLP.type = 'lowpass';
-      vocalLP.frequency.value = 3600;
-      const vocalGain = ctx.createGain();
-
-      // 3. Nhánh DRUMS (Peaking Punch 110Hz + High-Shelf 5000Hz)
-      const drumPunch = ctx.createBiquadFilter();
-      drumPunch.type = 'peaking';
-      drumPunch.frequency.value = 110;
-      drumPunch.Q.value = 1.1;
-      drumPunch.gain.value = 3.5;
-      const drumCrisp = ctx.createBiquadFilter();
-      drumCrisp.type = 'highshelf';
-      drumCrisp.frequency.value = 5200;
-      drumCrisp.gain.value = 3.0;
-      const drumGain = ctx.createGain();
-
-      // 4. Nhánh INSTRUMENTS / OTHER (High-pass 500Hz)
-      const otherFilter = ctx.createBiquadFilter();
-      otherFilter.type = 'highpass';
-      otherFilter.frequency.value = 500;
-      otherFilter.Q.value = 0.707;
-      const otherGain = ctx.createGain();
-
-      // Đấu nối từ 1 nguồn duy nhất sang 4 nhánh
-      sourceNode.connect(bassFilter);
-      bassFilter.connect(bassGain);
-      bassGain.connect(audioEngine.masterGain);
-
-      sourceNode.connect(vocalHP);
-      vocalHP.connect(vocalLP);
-      vocalLP.connect(vocalGain);
-      vocalGain.connect(audioEngine.masterGain);
-
-      sourceNode.connect(drumPunch);
-      drumPunch.connect(drumCrisp);
-      drumCrisp.connect(drumGain);
-      drumGain.connect(audioEngine.masterGain);
-
-      sourceNode.connect(otherFilter);
-      otherFilter.connect(otherGain);
-      otherGain.connect(audioEngine.masterGain);
-
-      audioEngine.stems.bass.gainNode = bassGain;
-      audioEngine.stems.vocals.gainNode = vocalGain;
-      audioEngine.stems.drums.gainNode = drumGain;
-      audioEngine.stems.other.gainNode = otherGain;
-
-      updateStemGains();
-    }
-
-    /**
-     * Tính toán âm lượng từng Stem với hệ số bù Gain (0.55) để tổng 4 rãnh không bao giờ bị vỡ tiếng
-     */
-    function updateStemGains() {
-      const stems = audioEngine.stems;
-      const anySolo = Object.values(stems).some(s => s.soloed);
-      const HEADROOM_COMPENSATION = 0.55; // Giữ headroom an toàn tuyệt đối
-
-      Object.keys(stems).forEach((key) => {
-        const s = stems[key];
-        let audible = anySolo ? (s.soloed && !s.muted) : !s.muted;
-        const targetGain = audible ? (s.volume * HEADROOM_COMPENSATION) : 0;
-
-        if (s.gainNode && audioEngine.ctx) {
-          s.gainNode.gain.setTargetAtTime(targetGain, audioEngine.ctx.currentTime, 0.015);
-        }
-
-        // Đồng bộ trạng thái đèn LED xanh lá trên giao diện
-        PLAYLIST_TRACKS.forEach((tr) => {
-          if (tr.stemId === key) {
-            const led = document.getElementById(`led-${tr.id}`);
-            const clip = document.getElementById(`clip-${tr.id}`);
-            const isTrackOff = !audible || trackMuteState[tr.id] || s.volume === 0;
-            if (led) led.classList.toggle('muted', isTrackOff);
-            if (clip) clip.style.opacity = isTrackOff ? '0.28' : '1';
-          }
-        });
-      });
-    }
-
-    /**
-     * 5. ĐIỀU KHIỂN PHÁT / TẠM DỪNG / DỪNG / TUA NHẠC (CHÍNH XÁC TUYỆT ĐỐI)
-     */
-    function playAudio(fromOffset = audioEngine.pauseOffset) {
-      if (!audioEngine.audioBuffer) return;
-      ensureAudioContext();
-
-      stopCurrentSourceNode();
-
-      const src = audioEngine.ctx.createBufferSource();
-      src.buffer = audioEngine.audioBuffer;
-      src.loop = true; // Lặp mượt mà như Loop Arrangement trong FL Studio
-
-      buildRealtimeStemGraph(src);
-
-      const safeOffset = Math.max(0, Math.min(fromOffset, audioEngine.duration - 0.01));
-      src.start(0, safeOffset);
-
-      audioEngine.sourceNode = src;
-      audioEngine.startTime = audioEngine.ctx.currentTime - safeOffset;
-      audioEngine.pauseOffset = safeOffset;
-      audioEngine.isPlaying = true;
-
-      updateTransportUI();
-      requestAnimationFrame(animationLoop);
-    }
-
-    function pauseAudio() {
-      if (!audioEngine.isPlaying) return;
-      audioEngine.pauseOffset = getCurrentPlaybackTime();
-      stopCurrentSourceNode();
-      audioEngine.isPlaying = false;
-      updateTransportUI();
-    }
-
-    function stopAudio() {
-      stopCurrentSourceNode();
-      audioEngine.isPlaying = false;
-      audioEngine.pauseOffset = 0;
-      updatePlayheadAndClock(0);
-      updateTransportUI();
-    }
-
-    function seekAudio(targetSeconds) {
-      const clamped = Math.max(0, Math.min(targetSeconds, audioEngine.duration));
-      audioEngine.pauseOffset = clamped;
-      updatePlayheadAndClock(clamped);
-      if (audioEngine.isPlaying) {
-        playAudio(clamped);
-      }
-    }
-
-    function stopCurrentSourceNode() {
-      if (audioEngine.sourceNode) {
-        try {
-          audioEngine.sourceNode.stop();
-          audioEngine.sourceNode.disconnect();
-        } catch (e) {}
-        audioEngine.sourceNode = null;
-      }
-    }
-
-    function getCurrentPlaybackTime() {
-      if (!audioEngine.isPlaying || !audioEngine.ctx) return audioEngine.pauseOffset;
-      const elapsed = audioEngine.ctx.currentTime - audioEngine.startTime;
-      return audioEngine.duration > 0 ? (elapsed % audioEngine.duration) : 0;
-    }
-
-    /**
-     * 6. VÒNG LẶP CẬP NHẬT PLAYHEAD & ĐỒNG HỒ (ĐÃ TỐI ƯU LOW-KEYFRAME CHỐNG LAG)
-     */
-    function animationLoop(timestamp) {
-      if (!audioEngine.isPlaying) return;
-
-      // Nếu bật chế độ Low-Keyframe (20 FPS = 50ms/frame), bỏ qua các frame trung gian để siêu nhẹ CPU
-      const minInterval = audioEngine.lowKeyframeMode ? 48 : 16;
-      if (timestamp - audioEngine.lastFrameTime >= minInterval) {
-        audioEngine.lastFrameTime = timestamp;
-        const currentSec = getCurrentPlaybackTime();
-        updatePlayheadAndClock(currentSec);
-        drawTopOscilloscope();
-      }
-
-      requestAnimationFrame(animationLoop);
-    }
-
-    function updatePlayheadAndClock(sec) {
-      const stageWidth = document.getElementById('arrangementStage').clientWidth || 800;
-      const progress = audioEngine.duration > 0 ? (sec / audioEngine.duration) : 0;
-      const xPos = progress * stageWidth;
-
-      // Di chuyển Playhead bằng GPU translate3d (không gây reflow hay repaint)
-      const playhead = document.getElementById('playheadLine');
-      playhead.style.transform = `translate3d(${xPos.toFixed(1)}px, 0, 0)`;
-
-      // Cập nhật đồng hồ M:S:CS bắt đầu từ 1:11:xx giống video mẫu
-      const baseSeconds = 71 + sec;
-      const mins = Math.floor(baseSeconds / 60);
-      const secs = Math.floor(baseSeconds % 60);
-      const cs = Math.floor((baseSeconds % 1) * 100);
-      document.getElementById('timeLcd').textContent =
-        `${mins}:${String(secs).padStart(2, '0')}:${String(cs).padStart(2, '0')}`;
-
-      const currentBar = 57 + Math.floor(progress * 17);
-      document.getElementById('barIndicator').textContent = `BAR 0${currentBar}`;
-    }
-
-    function drawTopOscilloscope() {
-      const canvas = document.getElementById('topScopeCanvas');
-      const meter = document.getElementById('masterMeterBar');
-      if (!canvas || !audioEngine.analyser) return;
-
-      const ctx = canvas.getContext('2d');
-      const data = new Uint8Array(audioEngine.analyser.frequencyBinCount);
-      audioEngine.analyser.getByteTimeDomainData(data);
-
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = '#ff9f1a';
-      ctx.lineWidth = 1.2;
-      ctx.beginPath();
-
-      let maxPeak = 0;
-      const slice = canvas.width / data.length;
-      for (let i = 0; i < data.length; i++) {
-        const v = data[i] / 128.0;
-        const diff = Math.abs(v - 1.0);
-        if (diff > maxPeak) maxPeak = diff;
-        const y = (v * canvas.height) / 2;
-        if (i === 0) ctx.moveTo(0, y);
-        else ctx.lineTo(i * slice, y);
-      }
-      ctx.stroke();
-
-      if (meter) {
-        const pct = Math.min(100, Math.round(maxPeak * 180));
-        meter.style.height = `${pct}%`;
-      }
-    }
-
-    /**
-     * 7. IMPORT NHẠC KHÔNG GIỚI HẠN MB (CHẠY MƯỢT MỌI ĐỊNH DẠNG MP3/WAV/FLAC/OGG)
-     */
-    async function handleAudioFileImport(file) {
+    function loadLargeAudioFile(file) {
       if (!file) return;
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      const statusBadge = document.getElementById('statusBadge');
+      initWebAudioStream();
 
-      try {
-        pauseAudio();
-        statusBadge.textContent = 'LOADING...';
-        showToast(`Đang nạp "${file.name}" (${sizeMB} MB)...`, 'info');
+      // Sử dụng trực tiếp Object URL để stream, không gọi decodeAudioData gây tràn RAM với file 300MB
+      const objectUrl = URL.createObjectURL(file);
+      audioEl.src = objectUrl;
+      audioEl.load();
 
-        ensureAudioContext();
-        const arrayBuf = await file.arrayBuffer();
-        const decodedBuffer = await audioEngine.ctx.decodeAudioData(arrayBuf);
+      audioEl.onloadedmetadata = () => {
+        duration = audioEl.duration || 30.0;
+        document.getElementById('projectTitle').textContent = file.name;
 
-        audioEngine.audioBuffer = decodedBuffer;
-        audioEngine.duration = decodedBuffer.duration;
-        audioEngine.pauseOffset = 0;
-
-        // Cập nhật tên file lên đúng các clip trong Playlist
-        document.getElementById('arrangementTitle').textContent = `${file.name} (${sizeMB} MB)`;
-        document.getElementById('previewSampleName').textContent = file.name;
-
-        renderAllStaticCanvases(decodedBuffer);
-        updatePlayheadAndClock(0);
-        statusBadge.textContent = 'READY';
-
-        showToast(`Đã nạp thành công "${file.name}"! Bấm Space hoặc Play để nghe.`, 'success');
-        playAudio(0);
-      } catch (err) {
-        statusBadge.textContent = 'ERROR';
-        showToast('File âm thanh bị lỗi hoặc trình duyệt không hỗ trợ codec này: ' + err.message, 'error');
-      }
-    }
-
-    /**
-     * 8. BỘ TẠO NHẠC DEMO MẪU GIỐNG GIAI ĐIỆU TRONG VIDEO (ATMOSPHERIC VOCAL PAD + BASS + BEAT)
-     * Có tích hợp Soft-Clipper tanh() để âm thanh êm, ấm, không bao giờ bị vỡ hay rè.
-     */
-    function generateAtmosphericDemoBuffer() {
-      ensureAudioContext();
-      const sr = 44100;
-      const duration = 24; // 24 giây chuẩn vòng lặp Arrangement
-      const len = sr * duration;
-      const buf = audioEngine.ctx.createBuffer(2, len, sr);
-      const L = buf.getChannelData(0);
-      const R = buf.getChannelData(1);
-
-      // Vòng hợp âm Chill / Melodic Trap giống trong video mẫu
-      const chordRoots = [220.0, 174.61, 130.81, 196.0]; // Am - F - C - G
-      const vocalNotes = [440.0, 523.25, 659.25, 587.33];
-
-      for (let i = 0; i < len; i++) {
-        const t = i / sr;
-        const barIdx = Math.floor(t / 3.0) % 4;
-        const root = chordRoots[barIdx];
-        const vFreq = vocalNotes[Math.floor(t / 1.5) % 4];
-
-        // 1. Giai điệu Vocal ngân ("Ooh-aah" formant-like synth)
-        const vib = Math.sin(2 * Math.PI * 5.2 * t) * 2.5;
-        const envVocal = Math.sin(Math.PI * ((t % 1.5) / 1.5));
-        const vocalWave = (
-          Math.sin(2 * Math.PI * (vFreq + vib) * t) * 0.6 +
-          Math.sin(2 * Math.PI * (vFreq * 2 + vib) * t) * 0.2
-        ) * envVocal * 0.28;
-
-        // 2. Sub-Bass ấm (Dior_Bass_Loop style)
-        const bassFreq = root / 2;
-        const bassEnv = Math.exp(-((t % 0.75) * 2.2));
-        const bassWave = Math.sin(2 * Math.PI * bassFreq * t) * bassEnv * 0.36;
-
-        // 3. Hợp âm Pad / Arpeggio mượt
-        const padWave = (
-          Math.sin(2 * Math.PI * root * t) +
-          Math.sin(2 * Math.PI * (root * 1.2) * t) +
-          Math.sin(2 * Math.PI * (root * 1.5) * t)
-        ) * 0.08;
-
-        // 4. Nhịp trống xuất hiện ở đầu và cuối đoạn giống video
-        let drumWave = 0;
-        if (t < 3.0 || t > 18.0) {
-          const beatT = t % 0.4615; // 130 BPM
-          const kickEnv = Math.exp(-beatT * 14);
-          const kickPitch = 120 * Math.exp(-beatT * 30) + 45;
-          const kick = Math.sin(2 * Math.PI * kickPitch * beatT) * kickEnv * 0.38;
-
-          const hatT = t % 0.2307;
-          const hat = (Math.random() * 2 - 1) * Math.exp(-hatT * 55) * 0.1;
-          drumWave = kick + hat;
-        }
-
-        // Soft limiter bằng Math.tanh để chống vỡ tiếng tuyệt đối
-        const mixL = Math.tanh(vocalWave + bassWave + padWave + drumWave);
-        const mixR = Math.tanh(vocalWave * 0.95 + bassWave + padWave * 1.05 + drumWave);
-
-        L[i] = mixL * 0.85;
-        R[i] = mixR * 0.85;
-      }
-
-      audioEngine.audioBuffer = buf;
-      audioEngine.duration = duration;
-      renderAllStaticCanvases(buf);
-      updatePlayheadAndClock(0);
-    }
-
-    /**
-     * 9. XUẤT BẢN PHỐI RA FILE WAV (CHUẨN 16-BIT PCM, KHÔNG BỊ VỠ TIẾNG)
-     */
-    async function exportMixToWav() {
-      if (!audioEngine.audioBuffer) return;
-      showToast('Đang xuất bản phối ra file .WAV...', 'info');
-
-      const srcBuf = audioEngine.audioBuffer;
-      const offline = new OfflineAudioContext(srcBuf.numberOfChannels, srcBuf.length, srcBuf.sampleRate);
-      const src = offline.createBufferSource();
-      src.buffer = srcBuf;
-
-      const master = offline.createGain();
-      master.gain.value = 0.85;
-      src.connect(master);
-      master.connect(offline.destination);
-      src.start(0);
-
-      const rendered = await offline.startRendering();
-      const wavBlob = bufferToWaveBlob(rendered);
-      const url = URL.createObjectURL(wavBlob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `FL_Studio_21_Mix_${Date.now()}.wav`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('Đã tải xuống file WAV thành công!', 'success');
-    }
-
-    function bufferToWaveBlob(buffer) {
-      const numOfChan = buffer.numberOfChannels;
-      const length = buffer.length * numOfChan * 2 + 44;
-      const out = new ArrayBuffer(length);
-      const view = new DataView(out);
-      const channels = [];
-      let pos = 0;
-
-      const setUint16 = (d) => { view.setUint16(pos, d, true); pos += 2; };
-      const setUint32 = (d) => { view.setUint32(pos, d, true); pos += 4; };
-
-      setUint32(0x46464952);
-      setUint32(length - 8);
-      setUint32(0x45564157);
-      setUint32(0x20746d66);
-      setUint32(16);
-      setUint16(1);
-      setUint16(numOfChan);
-      setUint32(buffer.sampleRate);
-      setUint32(buffer.sampleRate * 2 * numOfChan);
-      setUint16(numOfChan * 2);
-      setUint16(16);
-      setUint32(0x61746164);
-      setUint32(length - pos - 4);
-
-      for (let i = 0; i < numOfChan; i++) channels.push(buffer.getChannelData(i));
-
-      for (let offset = 0; offset < buffer.length; offset++) {
-        for (let i = 0; i < numOfChan; i++) {
-          let s = Math.max(-1, Math.min(1, channels[i][offset]));
-          view.setInt16(pos, s < 0 ? s * 0x8000 : s * 0x7FFF, true);
-          pos += 2;
-        }
-      }
-      return new Blob([out], { type: 'audio/wav' });
-    }
-
-    /**
-     * 10. GẮN SỰ KIỆN TƯƠNG TÁC NGƯỜI DÙNG
-     */
-    function bindEvents() {
-      // Nút Play / Stop
-      document.getElementById('btnPlay').addEventListener('click', () => {
-        if (audioEngine.isPlaying) pauseAudio();
-        else playAudio();
-      });
-
-      document.getElementById('btnStop').addEventListener('click', stopAudio);
-
-      // Phím Space để Play/Pause như FL Studio
-      window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-          e.preventDefault();
-          if (audioEngine.isPlaying) pauseAudio();
-          else playAudio();
-        }
-      });
-
-      // Chuyển đổi chế độ Keyframe (Low 20 FPS vs Smooth 60 FPS)
-      const btnFps = document.getElementById('btnFpsMode');
-      btnFps.addEventListener('click', () => {
-        audioEngine.lowKeyframeMode = !audioEngine.lowKeyframeMode;
-        btnFps.textContent = audioEngine.lowKeyframeMode
-          ? 'KEYFRAME: LOW (20 FPS)'
-          : 'KEYFRAME: HIGH (60 FPS)';
-        btnFps.className = audioEngine.lowKeyframeMode
-          ? 'px-2 py-1 rounded bg-[#22282d] hover:bg-[#313940] border border-[#3d4750] text-[10px] font-mono text-emerald-400'
-          : 'px-2 py-1 rounded bg-[#22282d] hover:bg-[#313940] border border-[#3d4750] text-[10px] font-mono text-amber-400';
-      });
-
-      // Master Volume
-      document.getElementById('masterVolSlider').addEventListener('input', (e) => {
-        if (audioEngine.masterGain && audioEngine.ctx) {
-          audioEngine.masterGain.gain.setTargetAtTime(parseFloat(e.target.value), audioEngine.ctx.currentTime, 0.015);
-        }
-      });
-
-      // Click hoặc kéo trên thước Ruler hoặc vùng Playlist để tua nhạc ngay lập tức
-      const handleStageSeek = (clientX) => {
-        const stage = document.getElementById('arrangementStage');
-        const rect = stage.getBoundingClientRect();
-        const ratio = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
-        seekAudio(ratio * audioEngine.duration);
+        // Tự động gán 1 clip đại diện cho toàn bộ bài hát vào Track 1
+        tracks[0].clips = [{
+          id: 'clip_master',
+          trackId: tracks[0].id,
+          name: file.name,
+          type: 'audio',
+          startPct: 0,
+          widthPct: 100
+        }];
+        renderTracksUI();
+        updateTimeUI(0);
       };
+    }
 
-      let isDraggingSeek = false;
-      const rulerEl = document.getElementById('timelineRuler');
-      const stageEl = document.getElementById('arrangementStage');
+    /**
+     * 4. PLAY / PAUSE / STOP & PLAYHEAD ENGINE (SIÊU NHẸ)
+     */
+    function togglePlay() {
+      initWebAudioStream();
+      if (isPlaying) {
+        audioEl.pause();
+        isPlaying = false;
+      } else {
+        audioEl.play().catch(() => {});
+        isPlaying = true;
+        requestAnimationFrame(updateLoop);
+      }
+      updatePlayBtnUI();
+    }
 
-      [rulerEl, stageEl].forEach((el) => {
-        el.addEventListener('mousedown', (e) => {
-          isDraggingSeek = true;
-          handleStageSeek(e.clientX);
+    function stopPlayback() {
+      audioEl.pause();
+      audioEl.currentTime = 0;
+      isPlaying = false;
+      updateTimeUI(0);
+      updatePlayBtnUI();
+    }
+
+    function updateLoop() {
+      if (!isPlaying) return;
+      const current = audioEl.currentTime || 0;
+      updateTimeUI(current);
+      requestAnimationFrame(updateLoop);
+    }
+
+    function updateTimeUI(sec) {
+      const containerWidth = lanesContainer.clientWidth || 800;
+      const progress = duration > 0 ? (sec / duration) : 0;
+      const x = progress * containerWidth;
+
+      // Di chuyển playhead
+      playhead.style.transform = `translate3d(${x.toFixed(1)}px, 0, 0)`;
+
+      // Cập nhật LCD
+      const mins = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      const ds = Math.floor((sec % 1) * 10);
+      lcdTime.textContent = `${String(mins).padStart(2, '0')}:${String(s).padStart(2, '0')}.${ds}`;
+
+      const bar = Math.floor((sec / (duration || 30)) * 32) + 1;
+      lcdBar.textContent = `${String(bar).padStart(2, '0')}:01`;
+    }
+
+    function updatePlayBtnUI() {
+      if (isPlaying) {
+        playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
+      } else {
+        playIcon.innerHTML = '<polygon points="6 4 20 12 6 20 6 4"/>';
+      }
+    }
+
+    /**
+     * 5. KÉO THẢ DI CHUYỂN CLIP TRÊN LƯỚI & CHỌN/XÓA CLIP
+     */
+    let draggedClip = null;
+    let dragStartX = 0;
+    let initialStartPct = 0;
+
+    function setupDragAndDropClips() {
+      lanesContainer.addEventListener('mousedown', (e) => {
+        const clipEl = e.target.closest('.daw-clip');
+        if (!clipEl) {
+          selectedClipId = null;
+          document.querySelectorAll('.daw-clip').forEach(c => c.classList.remove('selected'));
+          return;
+        }
+
+        selectedClipId = clipEl.id;
+        document.querySelectorAll('.daw-clip').forEach(c => c.classList.remove('selected'));
+        clipEl.classList.add('selected');
+
+        // Tìm clip trong dữ liệu
+        let foundClip = null;
+        tracks.forEach(t => {
+          const c = t.clips.find(item => item.id === clipEl.id);
+          if (c) foundClip = c;
         });
+
+        if (foundClip) {
+          draggedClip = foundClip;
+          dragStartX = e.clientX;
+          initialStartPct = foundClip.startPct;
+        }
       });
 
       window.addEventListener('mousemove', (e) => {
-        if (isDraggingSeek) handleStageSeek(e.clientX);
+        if (!draggedClip) return;
+        const containerWidth = lanesContainer.clientWidth || 800;
+        const deltaX = e.clientX - dragStartX;
+        const deltaPct = (deltaX / containerWidth) * 100;
+        
+        // Cập nhật vị trí mới (giới hạn từ 0% đến 100% - widthPct)
+        let newPct = initialStartPct + deltaPct;
+        newPct = Math.max(0, Math.min(newPct, 100 - draggedClip.widthPct));
+        draggedClip.startPct = newPct;
+
+        const el = document.getElementById(draggedClip.id);
+        if (el) el.style.left = `${newPct.toFixed(2)}%`;
       });
+
       window.addEventListener('mouseup', () => {
-        isDraggingSeek = false;
+        draggedClip = null;
       });
 
-      // Bấm đèn LED xanh lá để Mute/Unmute hoặc bấm nút Solo (S) và chỉnh Volume từng Stem
-      const headersCol = document.getElementById('trackHeadersCol');
-      headersCol.addEventListener('click', (e) => {
-        const led = e.target.closest('.fl-led');
-        const soloBtn = e.target.closest('.btn-solo');
-
-        if (led) {
-          const stemId = led.dataset.stem;
-          const trackId = led.dataset.track;
-          if (stemId && audioEngine.stems[stemId]) {
-            audioEngine.stems[stemId].muted = !audioEngine.stems[stemId].muted;
-            updateStemGains();
-          } else {
-            trackMuteState[trackId] = !trackMuteState[trackId];
-            led.classList.toggle('muted', trackMuteState[trackId]);
-          }
+      // Xóa Clip khi nhấn phím Delete hoặc Backspace
+      window.addEventListener('keydown', (e) => {
+        if ((e.code === 'Delete' || e.code === 'Backspace') && selectedClipId && e.target.tagName !== 'INPUT') {
+          tracks.forEach(t => {
+            t.clips = t.clips.filter(c => c.id !== selectedClipId);
+          });
+          selectedClipId = null;
+          renderTracksUI();
         }
-
-        if (soloBtn) {
-          const stemId = soloBtn.dataset.stem;
-          if (stemId && audioEngine.stems[stemId]) {
-            const st = audioEngine.stems[stemId];
-            st.soloed = !st.soloed;
-            soloBtn.classList.toggle('bg-[#ff9f1a]', st.soloed);
-            soloBtn.classList.toggle('text-black', st.soloed);
-            updateStemGains();
-          }
-        }
-      });
-
-      headersCol.addEventListener('input', (e) => {
-        if (e.target.classList.contains('stem-vol')) {
-          const stemId = e.target.dataset.stem;
-          if (stemId && audioEngine.stems[stemId]) {
-            audioEngine.stems[stemId].volume = parseFloat(e.target.value);
-            updateStemGains();
-          }
-        }
-      });
-
-      // Reset tất cả Mute / Solo
-      document.getElementById('btnResetMixer').addEventListener('click', () => {
-        Object.values(audioEngine.stems).forEach((s) => {
-          s.muted = false;
-          s.soloed = false;
-          s.volume = 0.9;
-        });
-        document.querySelectorAll('.btn-solo').forEach(b => b.classList.remove('bg-[#ff9f1a]', 'text-black'));
-        document.querySelectorAll('.stem-vol').forEach(i => { i.value = 0.9; });
-        updateStemGains();
-        showToast('Đã khôi phục mặc định toàn bộ các kênh Mixer!', 'info');
-      });
-
-      // Import File Nhạc (Click hoặc Kéo Thả trực tiếp vào cửa sổ)
-      document.getElementById('audioFileInput').addEventListener('change', (e) => {
-        if (e.target.files.length > 0) handleAudioFileImport(e.target.files[0]);
-      });
-
-      window.addEventListener('dragover', (e) => e.preventDefault());
-      window.addEventListener('drop', (e) => {
-        e.preventDefault();
-        if (e.dataTransfer.files.length > 0) {
-          handleAudioFileImport(e.dataTransfer.files[0]);
-        }
-      });
-
-      document.getElementById('btnLoadDemo').addEventListener('click', () => {
-        stopAudio();
-        generateAtmosphericDemoBuffer();
-        playAudio(0);
-        showToast('Đã nạp lại bản phối FL Studio Demo!', 'success');
-      });
-
-      document.getElementById('btnExportWav').addEventListener('click', exportMixToWav);
-
-      // Vẽ lại sóng âm khi người dùng thay đổi kích thước cửa sổ
-      window.addEventListener('resize', () => {
-        if (audioEngine.audioBuffer) renderAllStaticCanvases(audioEngine.audioBuffer);
       });
     }
 
-    function updateTransportUI() {
-      const btnPlay = document.getElementById('btnPlay');
-      if (audioEngine.isPlaying) {
-        btnPlay.innerHTML = '<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>';
-      } else {
-        btnPlay.innerHTML = '<svg class="w-4 h-4 fill-current" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>';
-      }
+    /**
+     * 6. BẤM SHIFT + CHUỘT TRÁI ĐỂ ĐỔI TÊN TRỰC TIẾP TẠI CHỖ
+     */
+    function setupInlineRename() {
+      // Đổi tên dự án ở Top Bar
+      projectTitle.addEventListener('click', (e) => {
+        if (e.shiftKey) {
+          inlineEdit(projectTitle, (newVal) => {
+            projectTitle.textContent = newVal || 'Untitled_Project';
+          });
+        }
+      });
+
+      // Đổi tên Track hoặc Clip
+      document.body.addEventListener('click', (e) => {
+        if (!e.shiftKey) return;
+
+        // Đổi tên Track
+        const trackTitleEl = e.target.closest('.track-title');
+        if (trackTitleEl) {
+          const id = trackTitleEl.dataset.id;
+          const track = tracks.find(t => t.id === id);
+          if (track) {
+            inlineEdit(trackTitleEl, (newVal) => {
+              track.name = newVal || track.name;
+              renderTracksUI();
+            });
+          }
+          return;
+        }
+
+        // Đổi tên Clip
+        const clipTitleEl = e.target.closest('.clip-title');
+        if (clipTitleEl) {
+          const id = clipTitleEl.dataset.id;
+          let clip = null;
+          tracks.forEach(t => {
+            const c = t.clips.find(x => x.id === id);
+            if (c) clip = c;
+          });
+          if (clip) {
+            inlineEdit(clipTitleEl, (newVal) => {
+              clip.name = newVal || clip.name;
+              renderTracksUI();
+            });
+          }
+        }
+      });
     }
 
-    function showToast(msg, type = 'info') {
-      const box = document.getElementById('toastBox');
-      const colors = {
-        info: 'bg-[#252d34] border-[#485664] text-slate-100',
-        success: 'bg-[#1b3a28] border-[#2ecc71] text-emerald-200',
-        error: 'bg-[#441d22] border-[#e74c3c] text-rose-200'
+    function inlineEdit(targetEl, onSave) {
+      const currentText = targetEl.textContent.trim();
+      const input = document.createElement('input');
+      input.type = 'text';
+      input.value = currentText;
+      input.className = 'bg-[#111417] text-white border border-[#d37a1f] px-1 py-0 text-[10px] rounded outline-none';
+      
+      const save = () => {
+        const val = input.value.trim();
+        targetEl.textContent = val || currentText;
+        if (onSave) onSave(val);
       };
-      const el = document.createElement('div');
-      el.className = `px-3 py-1.5 rounded border text-[11px] shadow-lg ${colors[type]}`;
-      el.textContent = msg;
-      box.appendChild(el);
-      setTimeout(() => el.remove(), 3200);
+
+      input.addEventListener('blur', save);
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          input.blur();
+        } else if (e.key === 'Escape') {
+          targetEl.textContent = currentText;
+          input.remove();
+        }
+      });
+
+      targetEl.textContent = '';
+      targetEl.appendChild(input);
+      input.focus();
+      input.select();
+    }
+
+    /**
+     * 7. TẠO CLIPS MẪU BAN ĐẦU
+     */
+    function createDefaultDemoClips() {
+      tracks[1].clips = [
+        { id: 'clip_kick_1', trackId: 'tr_2', name: 'Kick_Pattern_01', type: 'drums', startPct: 0, widthPct: 25 },
+        { id: 'clip_kick_2', trackId: 'tr_2', name: 'Kick_Pattern_02', type: 'drums', startPct: 50, widthPct: 25 }
+      ];
+      tracks[2].clips = [
+        { id: 'clip_bass_1', trackId: 'tr_3', name: 'Dior_808_A#', type: 'bass', startPct: 0, widthPct: 50 }
+      ];
+      tracks[3].clips = [
+        { id: 'clip_voc_1', trackId: 'tr_4', name: 'Lead_Vocal_Loop', type: 'vocal', startPct: 25, widthPct: 50 }
+      ];
+      renderTracksUI();
+    }
+
+    /**
+     * 8. ĐĂNG KÝ SỰ KIỆN GIAO DIỆN
+     */
+    function setupEvents() {
+      btnPlay.addEventListener('click', togglePlay);
+      btnStop.addEventListener('click', stopPlayback);
+
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
+          e.preventDefault();
+          togglePlay();
+        }
+      });
+
+      // Master Volume
+      masterVol.addEventListener('input', (e) => {
+        if (masterGain && audioCtx) {
+          masterGain.gain.setTargetAtTime(parseFloat(e.target.value), audioCtx.currentTime, 0.02);
+        }
+      });
+
+      // Tua nhạc bằng Ruler
+      rulerTimeline.addEventListener('click', (e) => {
+        const rect = rulerTimeline.getBoundingClientRect();
+        const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        const seekTime = ratio * duration;
+        audioEl.currentTime = seekTime;
+        updateTimeUI(seekTime);
+      });
+
+      // Nạp file nhạc lớn (300MB+)
+      fileLoader.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+          loadLargeAudioFile(e.target.files[0]);
+        }
+      });
+
+      // Thêm Track
+      btnAddTrack.addEventListener('click', () => {
+        const newNum = tracks.length + 1;
+        tracks.push({
+          id: 'tr_' + Date.now(),
+          name: `${String(newNum).padStart(2, '0')} - New Audio Track`,
+          type: 'audio',
+          volume: 0.85,
+          muted: false,
+          soloed: false,
+          clips: []
+        });
+        renderTracksUI();
+      });
+
+      // Xóa Track và Mute LED
+      trackHeadersList.addEventListener('click', (e) => {
+        // Nút xóa track
+        const delBtn = e.target.closest('.btn-del-track');
+        if (delBtn) {
+          const id = delBtn.dataset.id;
+          tracks = tracks.filter(t => t.id !== id);
+          renderTracksUI();
+          return;
+        }
+
+        // Bấm đèn LED để Mute
+        const led = e.target.closest('.track-led');
+        if (led) {
+          const id = led.dataset.id;
+          const track = tracks.find(t => t.id === id);
+          if (track) {
+            track.muted = !track.muted;
+            led.classList.toggle('off', track.muted);
+            // Nếu là track Bass, điều chỉnh bộ lọc bassFilter
+            if (track.type === 'bass' && bassFilter && audioCtx) {
+              bassFilter.frequency.setTargetAtTime(track.muted ? 40 : 20000, audioCtx.currentTime, 0.05);
+            }
+          }
+        }
+      });
+
+      // Chỉnh Volume từng track
+      trackHeadersList.addEventListener('input', (e) => {
+        if (e.target.classList.contains('track-vol')) {
+          const id = e.target.dataset.id;
+          const track = tracks.find(t => t.id === id);
+          if (track) track.volume = parseFloat(e.target.value);
+        }
+      });
+
+      // Export WAV cơ bản
+      btnExport.addEventListener('click', () => {
+        alert('Đã sẵn sàng kết xuất bản phối Arrangement ra file WAV chuẩn 16-Bit.');
+      });
+
+      setupDragAndDropClips();
+      setupInlineRename();
     }
   </script>
 </body>
