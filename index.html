@@ -1,1294 +1,2139 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>FL Studio Arrangement Engine</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    :root {
-      --bg-main: #181c1f;
-      --bg-panel: #21262b;
-      --bg-header: #2a3036;
-      --bg-grid-a: #1e2429;
-      --bg-grid-b: #1b2025;
-      --border-dark: #111417;
-      --border-light: #323a42;
-      --text-main: #b8c2cc;
-      --text-muted: #6c7782;
-      --fl-playhead: #e08b2c;
-      --fl-led-on: #50d85c;
-    }
-
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-drag: none;
-    }
-
-    body {
-      margin: 0;
-      background-color: var(--bg-main);
-      color: var(--text-main);
-      font-family: "Segoe UI", Tahoma, sans-serif;
-      font-size: 11px;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      overflow: hidden;
-    }
-
-    /* Thanh cuộn mảnh chuẩn DAW */
-    ::-webkit-scrollbar {
-      width: 7px;
-      height: 7px;
-    }
-    ::-webkit-scrollbar-track {
-      background: #14171a;
-    }
-    ::-webkit-scrollbar-thumb {
-      background: #363f47;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #48535e;
-    }
-
-    /* Lưới Playlist chia vạch Bar & 4-Bar Shading giống video */
-    .fl-grid {
-      background-color: var(--bg-grid-a);
-      background-image:
-        linear-gradient(to right, rgba(0, 0, 0, 0.14) 50%, transparent 50%),
-        linear-gradient(to right, #121619 1px, transparent 1px),
-        linear-gradient(to right, rgba(255, 255, 255, 0.025) 1px, transparent 1px),
-        linear-gradient(to bottom, #14181c 1px, transparent 1px);
-      background-size: 320px 100%, 40px 100%, 10px 100%, 100% 28px;
-    }
-
-    /* Đèn LED trạng thái nhỏ gọn */
-    .led-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background-color: var(--fl-led-on);
-      box-shadow: 0 0 4px rgba(80, 216, 92, 0.6);
-      cursor: pointer;
-      flex-shrink: 0;
-    }
-    .led-dot.off {
-      background-color: #222926;
-      box-shadow: none;
-      border: 1px solid #313b36;
-    }
-
-    /* Thanh trượt mảnh 3px */
-    input[type="range"].daw-slider {
-      -webkit-appearance: none;
-      background: #121518;
-      height: 3px;
-      border: 1px solid #2d353c;
-      outline: none;
-    }
-    input[type="range"].daw-slider::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      width: 7px;
-      height: 9px;
-      background: #9aa6b2;
-      border: 1px solid #111;
-      cursor: ew-resize;
-    }
-    input[type="range"].daw-slider::-webkit-slider-thumb:hover {
-      background: #e08b2c;
-    }
-
-    /* Con trỏ Playhead tối ưu GPU (Low-Keyframe) */
-    #playhead {
-      position: absolute;
-      top: 0;
-      bottom: 0;
-      left: 0;
-      width: 1.5px;
-      background-color: var(--fl-playhead);
-      pointer-events: none;
-      z-index: 40;
-      will-change: transform;
-      transform: translate3d(0, 0, 0);
-    }
-    #playhead::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: -4px;
-      border-left: 4.5px solid transparent;
-      border-right: 4.5px solid transparent;
-      border-top: 6px solid var(--fl-playhead);
-    }
-
-    /* Khối Clip trên Playlist (Chiều cao mỏng 24px nằm trong rãnh 28px) */
-    .clip-box {
-      position: absolute;
-      top: 2px;
-      height: 24px;
-      border: 1px solid rgba(0, 0, 0, 0.7);
-      border-radius: 1px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      cursor: grab;
-    }
-    .clip-box:active {
-      cursor: grabbing;
-    }
-    .clip-box.selected {
-      border-color: #e6edf3;
-      z-index: 15;
-    }
-    .clip-header {
-      height: 10px;
-      line-height: 10px;
-      font-size: 8.5px;
-      padding: 0 3px;
-      background: rgba(0, 0, 0, 0.35);
-      color: #d8e0e8;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      white-space: nowrap;
-      overflow: hidden;
-    }
-    /* Tay nắm kéo dãn độ dài bên mép phải của Clip */
-    .clip-resizer {
-      position: absolute;
-      top: 0;
-      right: 0;
-      bottom: 0;
-      width: 5px;
-      cursor: ew-resize;
-      z-index: 5;
-    }
-    .clip-resizer:hover {
-      background: rgba(255, 255, 255, 0.25);
-    }
-
-    .daw-btn {
-      background: #283037;
-      border: 1px solid #14181c;
-      color: #c2ccd6;
-      padding: 2px 6px;
-      font-size: 10px;
-      border-radius: 1px;
-      cursor: pointer;
-    }
-    .daw-btn:hover {
-      background: #333d46;
-      color: #fff;
-    }
-    .daw-btn:active {
-      background: #1e2429;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Công Cụ Tự Động Ghép Bản Nâng Cấp Aurora V2</title>
+<style>
+  *{box-sizing:border-box;font-family:'Segoe UI',Tahoma,sans-serif;margin:0;padding:0}
+  body{background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;min-height:100vh;display:flex;justify-content:center;align-items:center;padding:20px}
+  .merger-card{background:#1e293b;border:2px solid #3b82f6;border-radius:20px;max-width:650px;width:100%;padding:32px;box-shadow:0 25px 60px rgba(0,0,0,.5);text-align:center}
+  h1{font-size:24px;color:#60a5fa;margin-bottom:10px}
+  p{font-size:14px;color:#cbd5e1;line-height:1.6;margin-bottom:20px}
+  .step-box{background:#0f172a;border:1px dashed #475569;border-radius:14px;padding:20px;margin-bottom:18px;text-align:left}
+  .step-title{font-weight:800;color:#38bdf8;font-size:15px;margin-bottom:8px}
+  input[type="file"]{width:100%;padding:12px;background:#1e293b;border:1px solid #3b82f6;border-radius:10px;color:#fff;cursor:pointer}
+  .btn-merge{width:100%;padding:16px;background:linear-gradient(135deg,#10b981,#059669);color:#fff;border:none;border-radius:12px;font-size:16px;font-weight:900;cursor:pointer;transition:.25s;box-shadow:0 10px 25px rgba(16,185,129,.35)}
+  .btn-merge:hover{transform:translateY(-2px);filter:brightness(1.1)}
+  .btn-merge:disabled{background:#475569;cursor:not-allowed;box-shadow:none;transform:none}
+  .status{margin-top:16px;font-size:14px;font-weight:700;color:#fde047;min-height:24px}
+  .feature-list{font-size:12px;color:#94a3b8;line-height:1.7;margin-top:10px;padding-left:18px}
+</style>
 </head>
 <body>
 
-  <!-- ==================== 1. THANH TRANSPORT TRÊN CÙNG ==================== -->
-  <header class="h-8 bg-[#242a2f] border-b border-[#111417] px-2 flex items-center justify-between gap-2 shrink-0 z-30">
-    
-    <!-- Menu trái -->
-    <div class="flex items-center gap-2.5">
-      <div class="flex items-center gap-2 text-[10px] font-semibold text-[#8c98a4]">
-        <span class="hover:text-white cursor-pointer">FILE</span>
-        <span class="hover:text-white cursor-pointer">EDIT</span>
-        <span class="hover:text-white cursor-pointer">ADD</span>
-        <span class="hover:text-white cursor-pointer">PATTERNS</span>
-        <span class="hover:text-white cursor-pointer">VIEW</span>
-        <span class="hover:text-white cursor-pointer">OPTIONS</span>
-        <span class="hover:text-white cursor-pointer">TOOLS</span>
-      </div>
-      <span class="text-[#39424a]">|</span>
-      <span id="projectTitle" class="text-[10px] font-mono text-[#aab6c2] cursor-pointer hover:text-white" title="Shift + Click trái để đổi tên dự án">
-        Arrangement_Project_130BPM.flp
-      </span>
-    </div>
+<div class="merger-card">
+  <h1>✨ TRÌNH TỰ ĐỘNG GHÉP CODE AURORA FULL</h1>
+  <p>Công cụ này sẽ giữ nguyên 100% toàn bộ code, biến, hàm, giao diện và cấu hình Firebase trong file <b>ls.html</b> gốc của bạn, đồng thời tự động ghép đầy đủ 11 tính năng mới vào file.</p>
 
-    <!-- Cụm Điều khiển Phát nhạc & Đồng hồ M:S:CS giống video -->
-    <div class="flex items-center gap-1.5 bg-[#191d21] px-2 py-0.5 border border-[#101315]">
-      <span class="px-1 py-0.2 bg-[#e08b2c] text-black font-bold text-[8px]">SONG</span>
-
-      <button id="btnPlay" class="w-5 h-5 bg-[#262d34] hover:bg-[#323b44] flex items-center justify-center text-[#e08b2c] border border-[#111417]" title="Play / Pause (Phím Space)">
-        <svg id="playSvg" class="w-3 h-3 fill-current" viewBox="0 0 24 24"><polygon points="6 4 20 12 6 20 6 4"/></svg>
-      </button>
-
-      <button id="btnStop" class="w-5 h-5 bg-[#262d34] hover:bg-[#323b44] flex items-center justify-center text-[#b8c2cc] border border-[#111417]" title="Stop">
-        <svg class="w-2.5 h-2.5 fill-current" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14"/></svg>
-      </button>
-
-      <!-- Đồng hồ số 1:11:51 -->
-      <div class="font-mono text-xs font-bold text-[#d4dde6] bg-[#121518] px-2 py-0.2 border border-[#262d34] min-w-[70px] text-center" id="clockDisplay">
-        1:11:00
-      </div>
-
-      <!-- BPM -->
-      <div class="font-mono text-[10px] text-[#9aa6b2] bg-[#121518] px-1.5 py-0.2 border border-[#262d34]">
-        130.000
-      </div>
-
-      <!-- Oscilloscope mini -->
-      <canvas id="miniScope" width="64" height="18" class="bg-[#121518] border border-[#262d34] block"></canvas>
-
-      <!-- Master Volume & Sub-Bass Gain -->
-      <div class="flex items-center gap-1 pl-1">
-        <span class="text-[8.5px] font-mono text-[#7c8894]">VOL</span>
-        <input id="masterVol" type="range" min="0" max="1.2" step="0.01" value="0.95" class="daw-slider w-12" title="Master Volume" />
-      </div>
-      <div class="flex items-center gap-1 pl-1">
-        <span class="text-[8.5px] font-mono text-[#7c8894]">BASS</span>
-        <input id="bassBoostSlider" type="range" min="-24" max="12" step="0.5" value="2" class="daw-slider w-12" title="Cắt / Tăng dải Sub-Bass thực tế (dB)" />
-      </div>
-    </div>
-
-    <!-- Cụm Công cụ Thêm Bass, Thêm Track Fake & Load Nhạc 300MB+ -->
-    <div class="flex items-center gap-1">
-      <label for="audioFileInput" class="daw-btn font-semibold text-[#e08b2c] border-[#3d4752]" title="Stream trực tiếp file 300MB - 1GB+ không tốn RAM">
-        + Load Audio (No Limit MB)
-      </label>
-      <input id="audioFileInput" type="file" accept="audio/*,.mp3,.wav,.flac,.ogg,.m4a" class="hidden" />
-
-      <button id="btnAddBassTrack" class="daw-btn" title="Thêm 1 Track Bass kèm sóng âm & kích hoạt Sub-Bass">
-        + Thêm Bass
-      </button>
-      <button id="btnAddFakeWave" class="daw-btn" title="Thêm 1 Track Fake dạng Audio Waveform">
-        + Fake Wave
-      </button>
-      <button id="btnAddFakeMidi" class="daw-btn" title="Thêm 1 Track Fake dạng nốt MIDI Piano Roll">
-        + Fake Track (MIDI)
-      </button>
-      <button id="btnAddFakeAuto" class="daw-btn" title="Thêm 1 Track Fake dạng Automation Clip">
-        + Fake Auto
-      </button>
-    </div>
-  </header>
-
-  <!-- ==================== 2. KHU VỰC LÀM VIỆC 3 CỘT ==================== -->
-  <div class="flex-1 flex overflow-hidden">
-
-    <!-- CỘT 1: BROWSER SAMPLE PACKS (BẤM VÀO ĐỂ CHÈN BASS / SOUND VÀO TRACK) -->
-    <aside class="w-48 bg-[#1b2024] border-r border-[#111417] flex flex-col shrink-0">
-      <div class="h-5 bg-[#252b30] border-b border-[#111417] px-2 flex items-center justify-between text-[9.5px] font-semibold text-[#9aa6b2]">
-        <span>Browser - Samples</span>
-        <span class="text-[8.5px] text-[#6c7782]">CLICK = ADD</span>
-      </div>
-
-      <div id="sampleBrowserList" class="flex-1 overflow-y-auto py-0.5 px-1 space-y-0.5 font-mono text-[9.5px]">
-        <!-- Danh sách Dior_Bass_Loop... -->
-      </div>
-
-      <!-- Khung xem trước sóng âm góc dưới bên trái giống video -->
-      <div class="h-20 bg-[#14171a] border-t border-[#262d34] p-1 flex flex-col justify-between">
-        <div class="flex justify-between text-[8.5px] text-[#7c8894] font-mono truncate">
-          <span id="previewSampleTitle">Dior_Bass_Loop_80_A#_down (2)</span>
-          <span>WAV</span>
-        </div>
-        <canvas id="samplePreviewCanvas" width="176" height="52" class="w-full h-[52px] bg-[#101315] border border-[#22282e] block"></canvas>
-      </div>
-    </aside>
-
-    <!-- CỘT 2: PATTERN PICKER (PATTERN 1 -> 30) -->
-    <aside class="w-24 bg-[#20262b] border-r border-[#111417] flex flex-col shrink-0">
-      <div class="h-5 bg-[#282f36] border-b border-[#111417] px-1.5 flex items-center justify-between text-[9.5px] font-semibold text-[#9aa6b2]">
-        <span>Patterns</span>
-        <span id="activePatLabel" class="text-[#e08b2c] font-mono">#16</span>
-      </div>
-      <div id="patternList" class="flex-1 overflow-y-auto py-0.5 px-1 space-y-0.5 text-[9.5px]">
-        <!-- Pattern 1 -> 30 -->
-      </div>
-    </aside>
-
-    <!-- CỘT 3: PLAYLIST ARRANGEMENT -->
-    <main class="flex-1 flex flex-col overflow-hidden bg-[#1b2025]">
-      
-      <!-- Thanh Sub-Toolbar nhỏ của Playlist -->
-      <div class="h-5 bg-[#262d33] border-b border-[#111417] px-2 flex items-center justify-between text-[9.5px] text-[#9aa6b2]">
-        <div class="flex items-center gap-3">
-          <span class="font-semibold text-[#c8d2dc]">Playlist - Arrangement</span>
-          <span class="text-[#6c7782]">Double-click lưới: Thêm Clip | Kéo Clip: Di chuyển | Chuột phải Clip: Xóa | Shift+Click tên: Đổi tên</span>
-        </div>
-        <div class="flex items-center gap-2">
-          <span id="streamStatus" class="font-mono text-[9px] text-[#50d85c]">ENGINE: READY</span>
-        </div>
-      </div>
-
-      <!-- Thước đo Bar (57 -> 73 giống video) -->
-      <div class="h-5 bg-[#1a1f23] border-b border-[#111417] flex shrink-0">
-        <div class="w-40 shrink-0 bg-[#22282d] border-r border-[#111417] px-2 flex items-center justify-between text-[8.5px] font-bold text-[#7c8894]">
-          <span>TRACK HEADERS</span>
-          <span>MUTE / VOL / DEL</span>
-        </div>
-        <div id="rulerArea" class="flex-1 relative overflow-hidden cursor-ew-resize">
-          <div id="rulerNumbers" class="absolute inset-0 flex items-center pointer-events-none"></div>
-          <div class="absolute top-0 left-0 right-0 h-[2px] bg-[#8f3d3d] pointer-events-none"></div>
-        </div>
-      </div>
-
-      <!-- Vùng cuộn chứa Track Headers & Lưới Arrangement (Mỗi rãnh cao đúng 28px mỏng gọn) -->
-      <div id="playlistViewport" class="flex-1 flex overflow-y-auto overflow-x-hidden relative">
-        
-        <!-- Cột Track Headers bên trái -->
-        <div id="trackHeadersContainer" class="w-40 shrink-0 bg-[#22282d] border-r border-[#111417] z-20">
-          <!-- Các Track Header -->
-        </div>
-
-        <!-- Vùng Lưới Arrangement bên phải -->
-        <div id="gridStage" class="flex-1 relative fl-grid overflow-hidden">
-          <div id="lanesWrapper" class="w-full relative"></div>
-          <div id="playhead"></div>
-        </div>
-
-      </div>
-    </main>
+  <div class="step-box">
+    <div class="step-title">Bước 1: Chọn file ls.html gốc từ máy của bạn</div>
+    <input type="file" id="sourceFileInput" accept=".html,.htm">
+    <ul class="feature-list">
+      <li>✅ Nút Quay lại trang chủ ở góc trên bên phải cho cả 2 giao diện Login/Register</li>
+      <li>✅ Thêm mục <b>Thi thử</b> ở Học sinh (hiện đề chia sẻ, tên, mã, môn, thời gian, @id giáo viên)</li>
+      <li>✅ Tick <b>Chia sẻ cộng đồng</b> & chọn <b>Phân loại môn học</b> cho tất cả các thể loại tạo đề</li>
+      <li>✅ Cấu hình <b>Tổ hợp môn</b> trong mục Tối Thượng (có nút ^ thu gọn mặc định, thêm/xóa môn)</li>
+      <li>✅ Gộp Giáo viên nâng cao, đưa Tạo bài kiểm tra V2 thành ô chọn, gộp Quản lý vào Tạo bài luyện</li>
+      <li>✅ Mở quyền Tạo đề cho mọi người (yêu cầu mật khẩu Bảo mật/Partner/Vua; miễn mật khẩu cho GV Ưu tú, King, gói CEO/VIP; vai trò Giáo viên thường vẫn cần mật khẩu)</li>
+      <li>✅ Tạo đề thông minh V4 hỗ trợ chuyển đổi: <b>Ảnh / PDF / Khác (Word .docx, .txt...)</b></li>
+      <li>✅ Menu <b>⚙️ Cài đặt chung</b> (Quản lí đề/cup/thống kê/riêng tư, Thông tin đổi @ 1 tuần/lần, Bạn bè)</li>
+      <li>✅ Kết bạn & Nhắn tin trực tiếp từ Profile người khác + Chuông thông báo 🔔 bên trái Avatar</li>
+      <li>✅ Menu <b>💬 Chat</b> bạn bè & Tạo nhóm nhỏ kiểu Messenger (Admin đổi tên, thêm/đuổi thành viên)</li>
+    </ul>
   </div>
 
-  <!-- Phần tử Audio ẩn dùng để Stream trực tiếp các file 300MB - 1GB+ mà không cần giải mã toàn bộ vào RAM -->
-  <audio id="giantAudioStreamer" preload="auto" loop crossorigin="anonymous" class="hidden"></audio>
+  <button class="btn-merge" id="mergeBtn" disabled onclick="mergeAndDownload()">⚡ GHÉP & TẢI FILE LS.HTML BẢN FULL</button>
+  <div class="status" id="statusText">Vui lòng chọn file ls.html gốc để bắt đầu...</div>
+</div>
 
-  <!-- ==================== 3. JAVASCRIPT ENGINE ==================== -->
-  <script>
-    /**
-     * BẢNG MÀU CƠ BẢN, TRẦM, CHUẨN FL STUDIO (KHÔNG DÙNG MÀU TÍM/HỒNG LÒE LOẸT)
-     */
-    const MUTE_PALETTE = {
-      bass:  '#3a4f5e', // Xanh xám trầm
-      wave:  '#614a56', // Nâu tím trầm giống clip audio Track 23/24 trong video
-      midi:  '#3d4852', // Xám chì chuẩn Pattern FL Studio
-      notes: '#2f4454', // Xanh slate tối chứa nốt MIDI bậc thang
-      auto:  '#2c5259'  // Xanh cổ vịt trầm cho Automation clip
+<!-- =========================================================================
+     NỘI DUNG BẢN NÂNG CẤP 11 TÍNH NĂNG (ĐƯỢC BƠM TỰ ĐỘNG VÀO LS.HTML)
+     ========================================================================= -->
+<template id="auroraUpgradePatchTemplate">
+<!-- ================= START AURORA UPGRADE PATCH V2 ================= -->
+<style id="aurora-v2-comprehensive-upgrade-styles">
+  /* 1. Nút quay lại trang chủ ở góc trên phải màn hình Login/Register */
+  #auroraBackToHomeLoginBtn {
+    position: fixed !important;
+    top: 16px !important;
+    right: 16px !important;
+    z-index: 2147483647 !important;
+    background: linear-gradient(135deg, #1877f2, #6f42c1) !important;
+    color: #fff !important;
+    border: 2px solid rgba(255,255,255,0.85) !important;
+    padding: 10px 18px !important;
+    border-radius: 999px !important;
+    font-size: 13px !important;
+    font-weight: 800 !important;
+    cursor: pointer !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.35) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    transition: transform 0.2s ease, box-shadow 0.2s ease !important;
+    backdrop-filter: blur(10px) !important;
+  }
+  #auroraBackToHomeLoginBtn:hover {
+    transform: translateY(-2px) scale(1.03) !important;
+    box-shadow: 0 12px 30px rgba(24,119,242,0.5) !important;
+  }
+
+  /* 2. Chuông thông báo bên trái Avatar */
+  .aurora-notif-wrapper {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    margin-right: 6px;
+  }
+  .aurora-bell-btn {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 1px solid rgba(255,255,255,0.35);
+    background: rgba(255,255,255,0.18);
+    color: #fff;
+    font-size: 17px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    transition: 0.2s;
+  }
+  body.aurora-interface-aria-blue .aurora-bell-btn,
+  body.aurora-interface-future .aurora-bell-btn {
+    background: rgba(24,119,242,0.12);
+    color: #1877f2;
+    border-color: rgba(24,119,242,0.3);
+  }
+  .aurora-bell-btn:hover {
+    transform: scale(1.08);
+    background: rgba(255,255,255,0.28);
+  }
+  .aurora-bell-badge {
+    position: absolute;
+    top: -4px;
+    right: -4px;
+    background: #dc3545;
+    color: #fff;
+    font-size: 10px;
+    font-weight: 900;
+    min-width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    border: 2px solid #fff;
+  }
+  .aurora-notif-dropdown {
+    position: fixed;
+    top: 64px;
+    right: 20px;
+    width: min(92vw, 380px);
+    max-height: 78vh;
+    background: #fff;
+    color: #222;
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    border: 1px solid #e2e8f0;
+    z-index: 2147483646;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .aurora-notif-dropdown.show {
+    display: flex;
+  }
+  .aurora-notif-header {
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #1877f2, #0d5fd6);
+    color: #fff;
+    font-weight: 800;
+    font-size: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .aurora-notif-tabs {
+    display: flex;
+    background: #f1f5f9;
+    padding: 4px;
+    gap: 4px;
+  }
+  .aurora-notif-tab {
+    flex: 1;
+    padding: 7px 6px;
+    font-size: 11px;
+    font-weight: 700;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    cursor: pointer;
+    color: #475569;
+  }
+  .aurora-notif-tab.active {
+    background: #fff;
+    color: #1877f2;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+  }
+  .aurora-notif-list {
+    padding: 10px;
+    overflow-y: auto;
+    max-height: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .aurora-notif-item {
+    padding: 10px 12px;
+    border-radius: 10px;
+    background: #f8fafc;
+    border-left: 4px solid #1877f2;
+    font-size: 12px;
+    line-height: 1.45;
+    cursor: pointer;
+    transition: 0.15s;
+  }
+  .aurora-notif-item:hover {
+    background: #eff6ff;
+  }
+  .aurora-notif-time {
+    font-size: 10px;
+    color: #64748b;
+    margin-top: 4px;
+  }
+
+  /* 3. Khung Collapse với nút ^ mặc định thu gọn */
+  .aurora-caret-box {
+    border: 1px solid #dbeafe;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    background: #fff;
+    overflow: hidden;
+  }
+  .aurora-caret-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 16px;
+    background: linear-gradient(135deg, #eff6ff, #e0f2fe);
+    color: #1d4ed8;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+  }
+  .aurora-caret-icon {
+    display: inline-block;
+    font-weight: 900;
+    font-size: 15px;
+    transition: transform 0.25s ease;
+    transform: rotate(180deg);
+  }
+  .aurora-caret-box.collapsed .aurora-caret-icon {
+    transform: rotate(0deg);
+  }
+  .aurora-caret-body {
+    padding: 14px 16px;
+    border-top: 1px solid #dbeafe;
+  }
+  .aurora-caret-box.collapsed .aurora-caret-body {
+    display: none !important;
+  }
+
+  /* 4. Khung Chia sẻ cộng đồng & Phân loại môn học gắn vào mọi trình tạo đề */
+  .aurora-universal-share-bar {
+    background: linear-gradient(135deg, #f0fdf4, #eff6ff);
+    border: 2px dashed #16a34a;
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin: 12px 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .aurora-share-check-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 800;
+    color: #15803d;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .aurora-share-check-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+  .aurora-subject-select-wrap {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+    min-width: 220px;
+    max-width: 340px;
+  }
+  .aurora-subject-select-wrap select {
+    margin: 0 !important;
+    padding: 8px 12px !important;
+    font-weight: 700;
+    border: 1.5px solid #2563eb !important;
+  }
+
+  /* 5. Giao diện Chat & Nhóm nhỏ kiểu Messenger */
+  .aurora-chat-layout {
+    display: grid;
+    grid-template-columns: 290px 1fr;
+    gap: 14px;
+    min-height: 540px;
+    max-height: 75vh;
+  }
+  .aurora-chat-sidebar {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .aurora-chat-main {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .aurora-chat-contact {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: 0.15s;
+  }
+  .aurora-chat-contact:hover, .aurora-chat-contact.active {
+    background: #e0f2fe;
+  }
+  .aurora-chat-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #1877f2, #6f42c1);
+    color: #fff;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    overflow: hidden;
+  }
+  .aurora-chat-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .aurora-chat-messages-box {
+    flex: 1;
+    padding: 14px;
+    overflow-y: auto;
+    background: #f8fafc;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .aurora-msg-bubble {
+    max-width: 75%;
+    padding: 9px 13px;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.45;
+    word-break: break-word;
+  }
+  .aurora-msg-bubble.me {
+    align-self: flex-end;
+    background: linear-gradient(135deg, #1877f2, #0d5fd6);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .aurora-msg-bubble.other {
+    align-self: flex-start;
+    background: #e2e8f0;
+    color: #1e293b;
+    border-bottom-left-radius: 4px;
+  }
+  @media (max-width: 768px) {
+    .aurora-chat-layout {
+      grid-template-columns: 1fr;
+      max-height: none;
+    }
+  }
+</style>
+
+<!-- GIAO DIỆN CÀI ĐẶT CHUNG (QUẢN LÍ, THÔNG TIN, FRIEND) -->
+<div id="auroraGeneralSettingsView" class="view-section container">
+  <div class="card">
+    <div class="section-title">
+      <span>⚙️ CÀI ĐẶT CHUNG HỆ THỐNG</span>
+      <span style="font-size:12px;font-weight:600">Quản lí • Thông tin • Bạn bè</span>
+    </div>
+    <div class="student-docs-tabs" id="auroraSettingsTabs">
+      <button type="button" class="student-docs-tab active" onclick="switchAuroraSettingsTab('manage', this)">🗂️ Quản lí</button>
+      <button type="button" class="student-docs-tab" onclick="switchAuroraSettingsTab('info', this)">👤 Thông tin</button>
+      <button type="button" class="student-docs-tab" onclick="switchAuroraSettingsTab('friends', this)">🤝 Friend (Bạn bè)</button>
+    </div>
+
+    <!-- TAB 1: QUẢN LÍ -->
+    <div id="auroraSettingsPanelManage" class="student-docs-panel active">
+      <!-- Tổng hợp đề & bài thi đã tạo (mặc định thu gọn) -->
+      <div class="aurora-caret-box collapsed" id="caretCreatedExams">
+        <div class="aurora-caret-header" onclick="toggleAuroraCaret('caretCreatedExams')">
+          <span>📝 Tổng hợp các đề & bài thi đã tạo của tôi</span>
+          <span class="aurora-caret-icon">^</span>
+        </div>
+        <div class="aurora-caret-body">
+          <p style="font-size:12px;color:#64748b;margin-bottom:10px">Chỉ hiển thị những đề thi, bài kiểm tra, bài luyện do tài khoản của bạn tạo ra:</p>
+          <div id="auroraMyCreatedExamsList"></div>
+        </div>
+      </div>
+
+      <!-- Tổng hợp Cup và Huân chương vinh danh (mặc định thu gọn) -->
+      <div class="aurora-caret-box collapsed" id="caretMyHonors">
+        <div class="aurora-caret-header" onclick="toggleAuroraCaret('caretMyHonors')">
+          <span>🏆 Tổng hợp các Cup và Huân chương vinh danh</span>
+          <span class="aurora-caret-icon">^</span>
+        </div>
+        <div class="aurora-caret-body">
+          <p style="font-size:12px;color:#64748b;margin-bottom:10px">Bấm vào từng Cup hoặc Huân chương để xem chi tiết người tặng và mốc thời gian tặng:</p>
+          <div id="auroraMyHonorsList" class="medal-grid"></div>
+        </div>
+      </div>
+
+      <!-- Bảng tổng hợp thống kê -->
+      <div class="card" style="background:#f8fafc;border:1px solid #e2e8f0;margin-top:14px">
+        <h4 style="color:#1877f2;margin-bottom:10px;font-size:14px">📊 Bảng Tổng Hợp Cá Nhân</h4>
+        <div class="home-stats" style="margin-bottom:0">
+          <div class="home-stat"><div class="hs-num" id="statMyTakenCount">0</div><div class="hs-label">Tổng bài đã làm</div></div>
+          <div class="home-stat online"><div class="hs-num" id="statMyCreatedCount">0</div><div class="hs-label">Tổng bài đã tạo</div></div>
+          <div class="home-stat" style="background:linear-gradient(135deg,#ec4899,#be185d)"><div class="hs-num" id="statMyLikesCount">0</div><div class="hs-label">Lượt yêu thích ❤️</div></div>
+        </div>
+      </div>
+
+      <!-- Cài đặt riêng tư nhắn tin -->
+      <div class="card" style="background:#fffbeb;border:1px solid #fde68a;margin-top:12px">
+        <label style="font-size:14px;color:#92400e">🔒 Quyền riêng tư (Chọn đối tượng có thể nhắn tin với bạn):</label>
+        <select id="auroraPrivacyMsgSelect" onchange="saveAuroraMsgPrivacy(this.value)" style="margin-top:8px;margin-bottom:0">
+          <option value="all">🌍 Tất cả mọi người</option>
+          <option value="friends">🤝 Chỉ bạn bè (Phải kết bạn mới nhắn tin được)</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- TAB 2: THÔNG TIN (Mặc định thu gọn tất cả) -->
+    <div id="auroraSettingsPanelInfo" class="student-docs-panel">
+      <div class="aurora-caret-box collapsed" id="caretInfoEmail">
+        <div class="aurora-caret-header" onclick="toggleAuroraCaret('caretInfoEmail')">
+          <span>📧 Thêm hoặc thay đổi Email</span>
+          <span class="aurora-caret-icon">^</span>
+        </div>
+        <div class="aurora-caret-body">
+          <label>Địa chỉ Email hiện tại / mới:</label>
+          <input type="email" id="settingInputEmail" placeholder="nhapemail@gmail.com">
+          <button class="btn btn-success" onclick="saveAuroraUserInfoField('email')">💾 Lưu Email</button>
+        </div>
+      </div>
+
+      <div class="aurora-caret-box collapsed" id="caretInfoPhone">
+        <div class="aurora-caret-header" onclick="toggleAuroraCaret('caretInfoPhone')">
+          <span>📱 Thêm hoặc thay đổi Số điện thoại</span>
+          <span class="aurora-caret-icon">^</span>
+        </div>
+        <div class="aurora-caret-body">
+          <label>Số điện thoại:</label>
+          <input type="text" id="settingInputPhone" placeholder="09xxxxxxxx">
+          <button class="btn btn-success" onclick="saveAuroraUserInfoField('phone')">💾 Lưu Số điện thoại</button>
+        </div>
+      </div>
+
+      <div class="aurora-caret-box collapsed" id="caretInfoPassword">
+        <div class="aurora-caret-header" onclick="toggleAuroraCaret('caretInfoPassword')">
+          <span>🔑 Đổi mật khẩu tài khoản</span>
+          <span class="aurora-caret-icon">^</span>
+        </div>
+        <div class="aurora-caret-body">
+          <label>Mật khẩu cũ:</label>
+          <input type="password" id="settingOldPass" placeholder="Nhập mật khẩu hiện tại...">
+          <label>Mật khẩu mới:</label>
+          <input type="password" id="settingNewPass" placeholder="Ít nhất 6 ký tự...">
+          <label>Xác nhận mật khẩu mới:</label>
+          <input type="password" id="settingConfirmPass" placeholder="Nhập lại mật khẩu mới...">
+          <button class="btn btn-warning" onclick="changeAuroraUserPassword()">🔐 Cập nhật mật khẩu</button>
+        </div>
+      </div>
+
+      <div class="aurora-caret-box collapsed" id="caretInfoUsername">
+        <div class="aurora-caret-header" onclick="toggleAuroraCaret('caretInfoUsername')">
+          <span>🏷️ Đổi tên @ID người dùng (Giới hạn 1 tuần / 1 lần)</span>
+          <span class="aurora-caret-icon">^</span>
+        </div>
+        <div class="aurora-caret-body">
+          <p style="font-size:12px;color:#dc3545;margin-bottom:8px">⚠️ Lưu ý: Tự đổi tại mục Thông tin chỉ được phép <b>1 tuần (7 ngày) 1 lần</b>. (Quản trị viên ở mục Quản lí tài khoản có thể đổi thoải mái không giới hạn).</p>
+          <label>Tên @ID mới (không bao gồm ký tự @):</label>
+          <input type="text" id="settingInputNewHandle" placeholder="vd: hocsinh_gioi">
+          <div id="settingHandleCooldownMsg" style="font-size:12px;color:#0d6efd;margin-bottom:8px"></div>
+          <button class="btn btn-success" onclick="changeAuroraUserHandle()">✏️ Đổi tên @ID</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: BẠN BÈ (FRIEND) -->
+    <div id="auroraSettingsPanelFriends" class="student-docs-panel">
+      <div class="form-grid-2">
+        <div class="card" style="border:1px solid #dbeafe">
+          <h4 style="color:#1877f2;margin-bottom:10px">🤝 Danh sách bạn bè (<span id="myFriendsTotalCount">0</span>)</h4>
+          <div id="auroraFriendsListContainer" style="max-height:420px;overflow-y:auto"></div>
+        </div>
+        <div class="card" style="border:1px solid #fef08a">
+          <h4 style="color:#ca8a04;margin-bottom:10px">📩 Lời mời kết bạn (<span id="myFriendReqTotalCount">0</span>)</h4>
+          <div id="auroraFriendRequestsContainer" style="max-height:420px;overflow-y:auto"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- GIAO DIỆN CHAT BẠN BÈ & NHÓM NHỎ -->
+<div id="auroraFriendsChatView" class="view-section container">
+  <div class="card">
+    <div class="section-title">
+      <span>💬 TRÒ CHUYỆN BẠN BÈ & NHÓM NHỎ</span>
+      <button type="button" class="btn btn-success" style="width:auto;padding:6px 14px;font-size:12px" onclick="openCreateSmallGroupModal()">➕ Tạo nhóm nhỏ</button>
+    </div>
+    <div class="aurora-chat-layout">
+      <div class="aurora-chat-sidebar">
+        <div style="padding:10px 12px;font-weight:800;font-size:12px;background:#e2e8f0;color:#334155">DANH SÁCH BẠN BÈ & NHÓM</div>
+        <div id="auroraChatSidebarList" style="flex:1;overflow-y:auto"></div>
+      </div>
+      <div class="aurora-chat-main">
+        <div id="auroraChatActiveHeader" style="padding:10px 14px;border-bottom:1px solid #e2e8f0;display:flex;justify-content:space-between;align-items:center;background:#fff">
+          <div style="display:flex;align-items:center;gap:10px;cursor:pointer" onclick="handleChatHeaderClick()">
+            <div class="aurora-chat-avatar" id="activeChatAvatar">💬</div>
+            <div>
+              <div style="font-weight:800;font-size:14px;color:#1e293b" id="activeChatName">Chọn một người bạn hoặc nhóm để nhắn tin</div>
+              <div style="font-size:11px;color:#64748b" id="activeChatSub">Nhóm nhỏ hỗ trợ cài đặt kiểu Messenger (không lệnh, không bong bóng)</div>
+            </div>
+          </div>
+          <button type="button" id="activeChatGroupSettingsBtn" class="btn btn-secondary" style="width:auto;padding:6px 12px;font-size:12px;display:none" onclick="openSmallGroupSettingsModal()">⚙️ Cài đặt nhóm</button>
+        </div>
+        <div class="aurora-chat-messages-box" id="auroraChatMessagesArea">
+          <div style="text-align:center;color:#94a3b8;margin:auto;font-size:13px">Hãy chọn một cuộc trò chuyện ở danh sách bên trái</div>
+        </div>
+        <div style="padding:10px;border-top:1px solid #e2e8f0;display:flex;gap:8px;background:#fff">
+          <input type="text" id="auroraChatInputText" placeholder="Nhập tin nhắn..." style="margin:0;flex:1" onkeydown="if(event.key==='Enter')sendAuroraChatMessage()">
+          <button type="button" class="btn" style="width:auto;padding:10px 18px" onclick="sendAuroraChatMessage()">Gửi ➤</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL TẠO NHÓM NHỎ & CÀI ĐẶT NHÓM KIỂU MESSENGER -->
+<div id="auroraSmallGroupModal" class="modal-overlay z-top">
+  <div class="modal-box" style="max-width:480px">
+    <div class="modal-header">
+      <h3 id="smallGroupModalTitle">➕ Tạo Nhóm Chat Nhỏ</h3>
+      <button class="close-btn" onclick="document.getElementById('auroraSmallGroupModal').classList.remove('show')">✖</button>
+    </div>
+    <div id="smallGroupModalBody"></div>
+  </div>
+</div>
+
+<script id="aurora-v2-comprehensive-upgrade-script">
+(function(){
+  'use strict';
+
+  /* ========================================================================
+     QUẢN LÝ DỮ LIỆU ĐỒNG BỘ (LOCALSTORAGE + FIREBASE REALTIME DB NẾU CÓ)
+     ======================================================================== */
+  const STORAGE_KEYS = {
+    SUBJECTS: 'aurora_v2_subjects_list',
+    SHARED_EXAMS: 'aurora_v2_shared_mock_exams',
+    FRIENDS: 'aurora_v2_friends_map',
+    FRIEND_REQS: 'aurora_v2_friend_requests',
+    NOTIFS: 'aurora_v2_notifications',
+    CHATS: 'aurora_v2_direct_and_group_chats',
+    GROUPS: 'aurora_v2_small_groups',
+    PRIVACY: 'aurora_v2_user_privacy_map',
+    USER_EXTRAS: 'aurora_v2_user_extras_map',
+    SESSION_CREATE_AUTH: 'aurora_v2_create_exam_verified'
+  };
+
+  const DEFAULT_SUBJECTS = [
+    'Toán', 'Văn', 'Anh', 'Sinh', 'Sử', 'Địa', 'Lý', 'Hóa',
+    'Tin', 'GDDP', 'GDQP', 'KTPL', 'Công nghệ', 'Tổ hợp KHTN', 'Tổ hợp KHXH'
+  ];
+
+  function loadJson(key, fallback) {
+    try {
+      const raw = localStorage.getItem(key);
+      return raw ? JSON.parse(raw) : fallback;
+    } catch (e) {
+      return fallback;
+    }
+  }
+
+  function saveJson(key, val) {
+    try {
+      localStorage.setItem(key, JSON.stringify(val));
+      if (window.firebase && window.firebase.database) {
+        window.firebase.database().ref('aurora_v2_sync/' + key).set(val).catch(()=>{});
+      }
+    } catch (e) {}
+  }
+
+  function getSubjectsList() {
+    const list = loadJson(STORAGE_KEYS.SUBJECTS, null);
+    if (!Array.isArray(list) || !list.length) {
+      saveJson(STORAGE_KEYS.SUBJECTS, DEFAULT_SUBJECTS);
+      return [...DEFAULT_SUBJECTS];
+    }
+    return list;
+  }
+
+  function getCurrentUserObj() {
+    if (window.currentUser && typeof window.currentUser === 'object') return window.currentUser;
+    try {
+      const u = localStorage.getItem('currentUser') || localStorage.getItem('aurora_current_user');
+      if (u) return JSON.parse(u);
+    } catch (e) {}
+    const navName = document.querySelector('#navUserInfo span, .nav-user span');
+    const uname = navName ? navName.textContent.trim().replace(/^@/, '') : 'guest';
+    return { username: uname || 'guest', displayName: uname || 'Khách', role: 'student' };
+  }
+
+  function formatRelativeTime(timestamp) {
+    const diffMs = Math.max(0, Date.now() - (Number(timestamp) || Date.now()));
+    const mins = Math.floor(diffMs / 60000);
+    if (mins < 1) return 'Vừa xong';
+    if (mins < 60) return mins + 'p';
+    const hours = Math.floor(mins / 60);
+    if (hours < 24) return hours + ' giờ';
+    const days = Math.floor(hours / 24);
+    if (days < 7) return days + ' ngày';
+    const weeks = Math.floor(days / 7);
+    return weeks + ' tuần';
+  }
+
+  function notifyToast(msg, type) {
+    if (typeof window.showToast === 'function') {
+      window.showToast(msg, type || 'info');
+      return;
+    }
+    const toast = document.getElementById('systemToast');
+    if (toast) {
+      toast.textContent = msg;
+      toast.className = 'show ' + (type || 'info');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.className = ''; toast.style.display = 'none'; }, 3200);
+    } else {
+      alert(msg);
+    }
+  }
+
+  /* ========================================================================
+     1. NÚT QUAY LẠI TRANG CHỦ Ở GÓC TRÊN BÊN PHẢI CHO CẢ 2 GIAO DIỆN LOGIN
+     ======================================================================== */
+  function setupAuthBackToHomeButton() {
+    const authOverlay = document.getElementById('authOverlay');
+    if (!authOverlay) return;
+    if (!document.getElementById('auroraBackToHomeLoginBtn')) {
+      const btn = document.createElement('button');
+      btn.id = 'auroraBackToHomeLoginBtn';
+      btn.type = 'button';
+      btn.innerHTML = '🏠 Quay lại trang chủ';
+      btn.onclick = function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        authOverlay.style.display = 'none';
+        authOverlay.classList.remove('show');
+        if (typeof window.switchView === 'function') {
+          try { window.switchView('homeView'); } catch (_) {}
+        }
+        const homeView = document.getElementById('homeView');
+        if (homeView) {
+          document.querySelectorAll('.view-section').forEach(s => s.classList.remove('active'));
+          homeView.classList.add('active');
+        }
+        notifyToast('Đã quay lại trang chủ (Chế độ xem khách)', 'info');
+      };
+      authOverlay.appendChild(btn);
+    }
+  }
+
+  /* ========================================================================
+     2. TỔ HỢP MÔN TRONG MỤC TỐI CAO -> CẤU HÌNH (MẶC ĐỊNH THU GỌN ^)
+     ======================================================================== */
+  function injectSupremeSubjectConfig() {
+    const supremeView = document.getElementById('supremeView') || document.querySelector('[id*="supreme" i], [id*="config" i]');
+    const targetContainer = supremeView || document.querySelector('.container');
+    if (!targetContainer || document.getElementById('auroraSupremeSubjectComboBox')) return;
+
+    const wrapper = document.createElement('div');
+    wrapper.id = 'auroraSupremeSubjectComboBox';
+    wrapper.className = 'aurora-caret-box collapsed';
+    wrapper.style.marginTop = '14px';
+    wrapper.innerHTML = `
+      <div class="aurora-caret-header" onclick="toggleAuroraCaret('auroraSupremeSubjectComboBox')">
+        <span>📚 Cấu hình Tổ hợp môn & Phân loại môn học</span>
+        <span class="aurora-caret-icon">^</span>
+      </div>
+      <div class="aurora-caret-body">
+        <p style="font-size:12px;color:#555;margin-bottom:10px">Thêm hoặc xóa bớt các môn học / tổ hợp môn (tự động đồng bộ với toàn bộ mục Tạo đề và Thi thử):</p>
+        <div style="display:flex;gap:8px;margin-bottom:12px">
+          <input type="text" id="newSubjectComboInput" placeholder="Nhập tên môn hoặc tổ hợp môn (VD: Toán, Văn, Anh, GDDP, GDQP...)" style="margin:0;flex:1">
+          <button type="button" class="btn btn-success" style="width:auto;padding:8px 16px" onclick="addAuroraSubjectCombo()">➕ Thêm môn</button>
+        </div>
+        <div id="auroraSubjectComboTags" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+      </div>
+    `;
+    targetContainer.appendChild(wrapper);
+    renderSubjectComboTags();
+  }
+
+  window.toggleAuroraCaret = function(id) {
+    const box = document.getElementById(id);
+    if (box) box.classList.toggle('collapsed');
+  };
+
+  function renderSubjectComboTags() {
+    const subjects = getSubjectsList();
+    const box = document.getElementById('auroraSubjectComboTags');
+    if (box) {
+      box.innerHTML = subjects.map((subj, idx) => `
+        <span style="display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:#e0f2fe;color:#0369a1;border-radius:999px;font-size:12px;font-weight:700;border:1px solid #bae6fd">
+          📖 ${subj}
+          <button type="button" onclick="removeAuroraSubjectCombo(${idx})" style="border:none;background:#ef4444;color:#fff;width:18px;height:18px;border-radius:50%;cursor:pointer;font-size:11px;line-height:1">×</button>
+        </span>
+      `).join('');
+    }
+    refreshAllSubjectDropdowns();
+  }
+
+  window.addAuroraSubjectCombo = function() {
+    const inp = document.getElementById('newSubjectComboInput');
+    if (!inp || !inp.value.trim()) return;
+    const val = inp.value.trim();
+    const list = getSubjectsList();
+    if (!list.includes(val)) {
+      list.push(val);
+      saveJson(STORAGE_KEYS.SUBJECTS, list);
+      renderSubjectComboTags();
+      notifyToast('Đã thêm môn/tổ hợp: ' + val, 'success');
+    }
+    inp.value = '';
+  };
+
+  window.removeAuroraSubjectCombo = function(idx) {
+    const list = getSubjectsList();
+    const removed = list.splice(idx, 1);
+    saveJson(STORAGE_KEYS.SUBJECTS, list);
+    renderSubjectComboTags();
+    notifyToast('Đã xóa môn: ' + (removed[0] || ''), 'warn');
+  };
+
+  function refreshAllSubjectDropdowns() {
+    const subjects = getSubjectsList();
+    document.querySelectorAll('.aurora-dynamic-subject-select').forEach(sel => {
+      const currentVal = sel.value;
+      const includeAll = sel.dataset.includeAll === 'true';
+      sel.innerHTML = (includeAll ? '<option value="ALL">📚 Tất cả các môn</option>' : '') +
+        subjects.map(s => `<option value="${s}">${s}</option>`).join('');
+      if (currentVal && (currentVal === 'ALL' || subjects.includes(currentVal))) {
+        sel.value = currentVal;
+      }
+    });
+  }
+
+  /* ========================================================================
+     3. Ô TICK "CHIA SẺ CỘNG ĐỒNG" & "PHÂN LOẠI MÔN HỌC" CHO MỌI THỂ LOẠI TẠO ĐỀ
+     ======================================================================== */
+  function injectUniversalShareAndSubjectBar() {
+    const selectors = [
+      '#teacherView .card',
+      '[id*="createExam" i]',
+      '[id*="practice" i]',
+      '[id*="smartExam" i]',
+      '[id*="examV2" i]',
+      '[id*="aiExam" i]'
+    ];
+    const containers = document.querySelectorAll(selectors.join(','));
+    containers.forEach((card, index) => {
+      if (card.querySelector('.aurora-universal-share-bar')) return;
+      const hasExamInputs = card.querySelector('input[type="text"], input[type="number"], textarea');
+      if (!hasExamInputs) return;
+
+      const bar = document.createElement('div');
+      bar.className = 'aurora-universal-share-bar';
+      bar.innerHTML = `
+        <label class="aurora-share-check-label">
+          <input type="checkbox" class="aurora-community-share-checkbox" checked>
+          <span>🌐 Chia sẻ cộng đồng (Hiện lên mục Thi thử của Học sinh)</span>
+        </label>
+        <div class="aurora-subject-select-wrap">
+          <label style="margin:0;white-space:nowrap;color:#1e40af">📚 Môn học:</label>
+          <select class="aurora-dynamic-subject-select"></select>
+        </div>
+        <button type="button" class="btn btn-success" style="width:auto;padding:8px 14px;font-size:12px" onclick="publishCurrentFormToMockExams(this)">🚀 Lưu & Cập nhật Đề</button>
+      `;
+      const firstInput = card.querySelector('input, select, textarea');
+      if (firstInput && firstInput.parentNode) {
+        firstInput.parentNode.insertBefore(bar, firstInput);
+      } else {
+        card.appendChild(bar);
+      }
+    });
+    refreshAllSubjectDropdowns();
+  }
+
+  window.publishCurrentFormToMockExams = function(btnEl) {
+    if (!verifyCanCreateExam()) return;
+    const card = btnEl.closest('.card, .view-section') || document;
+    const textInputs = Array.from(card.querySelectorAll('input[type="text"]'));
+    const numInputs = Array.from(card.querySelectorAll('input[type="number"]'));
+    const passInput = card.querySelector('input[type="password"]');
+    const shareCheckbox = card.querySelector('.aurora-community-share-checkbox');
+    const subjectSelect = card.querySelector('.aurora-dynamic-subject-select');
+
+    const title = (textInputs[0] && textInputs[0].value.trim()) || 'Đề kiểm tra tổng hợp';
+    const code = (textInputs[1] && textInputs[1].value.trim()) || ('DE' + Math.floor(1000 + Math.random() * 9000));
+    const duration = (numInputs[0] && Number(numInputs[0].value)) || 45;
+    const examPassword = (passInput && passInput.value.trim()) || 'Không mật khẩu';
+    const isShared = shareCheckbox ? shareCheckbox.checked : true;
+    const subject = subjectSelect ? subjectSelect.value : 'Toán';
+    const user = getCurrentUserObj();
+
+    const exams = loadJson(STORAGE_KEYS.SHARED_EXAMS, []);
+    const existingIdx = exams.findIndex(e => e.code === code);
+    const examRecord = {
+      id: 'exam_' + Date.now(),
+      title: title,
+      code: code,
+      subject: subject,
+      duration: duration,
+      password: examPassword,
+      shared: isShared,
+      creatorUsername: user.username || 'teacher',
+      creatorName: user.displayName || user.username || 'Giáo viên',
+      createdAt: Date.now(),
+      likes: existingIdx >= 0 ? (exams[existingIdx].likes || 0) : 0
     };
 
-    const BROWSER_SAMPLES = [
-      { name: 'Dior_Bass_Loop_80_A#_up', type: 'bass' },
-      { name: 'Dior_Bass_Loop_80_A#_up_2', type: 'bass' },
-      { name: 'Dior_Bass_Loop_80_C#', type: 'bass' },
-      { name: 'Dior_Bass_Loop_80_E', type: 'bass' },
-      { name: 'Dior_Bass_Loop_85_A', type: 'bass' },
-      { name: 'Dior_Bass_Loop_90_D#', type: 'bass' },
-      { name: 'Dior_Bass_Loop_90_F', type: 'bass' },
-      { name: 'Dior_Bass_Loop_90_F#', type: 'bass' },
-      { name: 'Dior_Bass_Loop_94_G#', type: 'bass' },
-      { name: 'Dior_Bass_Loop_100_C#', type: 'bass' },
-      { name: 'Dior_Bass_Loop_80_A#_down (2)', type: 'bass', active: true },
-      { name: 'Sub_808_Deep_Glide_C', type: 'bass' },
-      { name: 'reese_bass_dark_130bpm', type: 'bass' },
-      { name: 'Ambient_Vocal_Chop_A#m', type: 'wave' },
-      { name: 'Crisp_Trap_Drum_Loop_130', type: 'wave' },
-      { name: 'Odin_Filter_Envelope', type: 'auto' }
-    ];
+    if (existingIdx >= 0) exams[existingIdx] = examRecord;
+    else exams.unshift(examRecord);
 
-    /**
-     * DANH SÁCH TRACK BAN ĐẦU (MÔ PHỎNG BỐ CỤC TRACK 15 -> 30 TRONG VIDEO MẪU)
-     */
-    let tracks = [
-      { id: 't15', name: 'Track 15', role: 'drums', muted: false, vol: 0.85, clips: [
-        { id: 'c1', name: 'Pattern 2', type: 'midi', startPct: 0, widthPct: 18, seed: 1 },
-        { id: 'c2', name: 'Pattern 2', type: 'midi', startPct: 82, widthPct: 18, seed: 1 }
-      ]},
-      { id: 't16', name: 'Track 16', role: 'drums', muted: false, vol: 0.85, clips: [
-        { id: 'c3', name: 'Pattern 16', type: 'midi', startPct: 0, widthPct: 18, seed: 2 },
-        { id: 'c4', name: 'Pattern 16', type: 'midi', startPct: 82, widthPct: 18, seed: 2 }
-      ]},
-      { id: 't17', name: 'Track 17', role: 'drums', muted: false, vol: 0.85, clips: [
-        { id: 'c5', name: 'Pattern 5', type: 'midi', startPct: 0, widthPct: 18, seed: 3 }
-      ]},
-      { id: 't18', name: 'Track 18', role: 'drums', muted: false, vol: 0.85, clips: [
-        { id: 'c6', name: 'Pattern 10', type: 'midi', startPct: 0, widthPct: 16, seed: 4 },
-        { id: 'c7', name: 'Pattern 10', type: 'midi', startPct: 82, widthPct: 18, seed: 4 }
-      ]},
-      { id: 't19', name: 'Track 19', role: 'bass', muted: false, vol: 0.9, clips: [
-        { id: 'c8', name: 'Pattern 12', type: 'midi', startPct: 0, widthPct: 16, seed: 5 },
-        { id: 'c9', name: 'Pattern 12', type: 'midi', startPct: 82, widthPct: 18, seed: 5 }
-      ]},
-      { id: 't20', name: 'Track 20 (Bass)', role: 'bass', muted: false, vol: 0.95, clips: [
-        { id: 'c10', name: 'Dior_Bass_Loop_80_A#_down (2)', type: 'bass', startPct: 0, widthPct: 22, seed: 11 },
-        { id: 'c11', name: 'Dior_Bass_Loop_80_A#_down (2)', type: 'bass', startPct: 82, widthPct: 18, seed: 11 }
-      ]},
-      { id: 't21', name: 'Track 21', role: 'synth', muted: false, vol: 0.85, clips: [
-        { id: 'c12', name: 'Pattern 22', type: 'notes', startPct: 18, widthPct: 68, seed: 7 }
-      ]},
-      { id: 't22', name: 'Track 22', role: 'synth', muted: false, vol: 0.85, clips: [
-        { id: 'c13', name: 'Pattern 23', type: 'notes', startPct: 18, widthPct: 68, seed: 8 }
-      ]},
-      { id: 't23', name: 'Track 23 (Audio)', role: 'vocal', muted: false, vol: 0.9, clips: [
-        { id: 'c14', name: 'Vocal_Stem_Main_A#', type: 'wave', startPct: 0, widthPct: 19, seed: 14 }
-      ]},
-      { id: 't24', name: 'Track 24 (Audio)', role: 'vocal', muted: false, vol: 0.9, clips: [
-        { id: 'c15', name: 'Dior_Bass_Loop_80_A#_Harmonic', type: 'wave', startPct: 0, widthPct: 19, seed: 19 }
-      ]},
-      { id: 't25', name: 'Track 25', role: 'synth', muted: false, vol: 0.8, clips: [
-        { id: 'c16', name: 'Pattern 26', type: 'midi', startPct: 0, widthPct: 10, seed: 6 }
-      ]},
-      { id: 't26', name: 'Track 26', role: 'synth', muted: false, vol: 0.8, clips: [] },
-      { id: 't27', name: 'Track 27', role: 'synth', muted: false, vol: 0.8, clips: [] },
-      { id: 't28', name: 'Track 28', role: 'auto', muted: false, vol: 0.85, clips: [
-        { id: 'c17', name: 'Odin', type: 'auto', startPct: 0, widthPct: 100, seed: 9 }
-      ]},
-      { id: 't29', name: 'Track 29', role: 'synth', muted: false, vol: 0.8, clips: [] },
-      { id: 't30', name: 'Track 30', role: 'synth', muted: false, vol: 0.8, clips: [] }
-    ];
+    saveJson(STORAGE_KEYS.SHARED_EXAMS, exams);
+    renderStudentMockExams();
+    renderMyCreatedExamsInSettings();
+    notifyToast(isShared ? `Đã lưu đề "${title}" (${subject}) và chia sẻ lên mục Thi thử!` : `Đã lưu đề "${title}" ở chế độ riêng tư!`, 'success');
+  };
 
-    let selectedClipId = null;
-    let activePatternNum = 16;
+  /* ========================================================================
+     4. MỤC "THI THỬ" Ở PHẦN HỌC SINH (HIỆN ĐỀ CHIA SẺ + @ID NGƯỜI CHIA SẺ)
+     ======================================================================== */
+  function setupStudentMockExamSection() {
+    const studentView = document.getElementById('studentLoginView');
+    if (!studentView || document.getElementById('studentMockExamPanel')) return;
 
-    /**
-     * HỆ THỐNG ÂM THANH LAI:
-     * 1. Khi người dùng tải file (kể cả 300MB - 1GB+), phát qua HTML5 Audio Streamer + Bộ lọc EQ Bass/Mid/High thời gian thực.
-     * 2. Khi chưa tải file, phát bộ Synth nội bộ nhẹ nhàng để có thể test ngay nút Bass và Mute/Vol.
-     */
-    const audioState = {
-      ctx: null,
-      hasExternalFile: false,
-      isPlaying: false,
-      duration: 28.0,
-      synthStartTime: 0,
-      synthPauseTime: 0,
-      synthTimer: null,
-      mediaSourceNode: null,
-      bassFilter: null,
-      midFilter: null,
-      highFilter: null,
-      masterGain: null,
-      analyser: null,
-      lastUiTick: 0
+    let navRow = studentView.querySelector('.student-actions-row, .student-docs-tabs');
+    if (!navRow) {
+      navRow = document.createElement('div');
+      navRow.className = 'student-docs-tabs';
+      navRow.innerHTML = `
+        <button type="button" class="student-docs-tab active" onclick="switchStudentMainSection('exam', this)">✍️ Làm bài thi</button>
+        <button type="button" class="student-docs-tab" onclick="if(window.openStudentDocumentLibrary)openStudentDocumentLibrary();else switchStudentMainSection('docs', this)">📚 Tài liệu</button>
+      `;
+      studentView.insertBefore(navRow, studentView.firstChild);
+    }
+
+    const mockBtn = document.createElement('button');
+    mockBtn.type = 'button';
+    mockBtn.className = 'student-docs-tab';
+    mockBtn.innerHTML = '🔥 Thi thử (Cộng đồng)';
+    mockBtn.onclick = function() {
+      const panel = document.getElementById('studentMockExamPanel');
+      if (panel) {
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'block';
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        renderStudentMockExams();
+      }
     };
+    navRow.appendChild(mockBtn);
 
-    const audioEl = document.getElementById('giantAudioStreamer');
+    const mockPanel = document.createElement('div');
+    mockPanel.id = 'studentMockExamPanel';
+    mockPanel.className = 'card student-card';
+    mockPanel.style.marginTop = '15px';
+    mockPanel.innerHTML = `
+      <div class="section-title">
+        <span>🔥 KHO ĐỀ THI THỬ CỘNG ĐỒNG DO THẦY CÔ CHIA SẺ</span>
+        <button type="button" class="btn btn-secondary" style="width:auto;padding:4px 10px;font-size:11px" onclick="document.getElementById('studentMockExamPanel').style.display='none'">Thu gọn ▲</button>
+      </div>
+      <div class="docs-filter-bar">
+        <div>
+          <label>Lọc theo môn học:</label>
+          <select id="mockExamFilterSubject" class="aurora-dynamic-subject-select" data-include-all="true" onchange="renderStudentMockExams()"></select>
+        </div>
+        <div>
+          <label>Tìm kiếm tên đề / mã đề / @id:</label>
+          <input type="text" id="mockExamSearchInput" placeholder="Nhập mã đề, tên đề hoặc @id giáo viên..." style="margin:0;padding:8px" oninput="renderStudentMockExams()">
+        </div>
+      </div>
+      <div id="studentMockExamGrid" class="docs-list-grid"></div>
+    `;
+    studentView.appendChild(mockPanel);
+    refreshAllSubjectDropdowns();
+    renderStudentMockExams();
+  }
 
-    window.addEventListener('DOMContentLoaded', () => {
-      renderBrowserAndPatterns();
-      renderRuler();
-      renderPlaylist();
-      drawSamplePreview(11);
-      setupInteractions();
+  window.renderStudentMockExams = function() {
+    const grid = document.getElementById('studentMockExamGrid');
+    if (!grid) return;
+    let exams = loadJson(STORAGE_KEYS.SHARED_EXAMS, []);
+    if (!exams.length) {
+      exams = [
+        {
+          id: 'sample_1',
+          title: 'Đề Thi Thử Tốt Nghiệp THPT Quốc Gia 2026 - Đề Số 01',
+          code: 'TOAN2026',
+          subject: 'Toán',
+          duration: 90,
+          password: 'Không',
+          shared: true,
+          creatorUsername: 'thay_giao_toan',
+          creatorName: 'Thầy Nguyễn Văn A',
+          createdAt: Date.now() - 3600000 * 5,
+          likes: 12
+        },
+        {
+          id: 'sample_2',
+          title: 'Đề Ôn Tập Kiểm Tra Cuối Kỳ Vật Lý 12',
+          code: 'LY12CK',
+          subject: 'Lý',
+          duration: 50,
+          password: 'Không',
+          shared: true,
+          creatorUsername: 'co_minh_ly',
+          creatorName: 'Cô Minh Lý',
+          createdAt: Date.now() - 3600000 * 24,
+          likes: 8
+        }
+      ];
+      saveJson(STORAGE_KEYS.SHARED_EXAMS, exams);
+    }
+
+    const subjFilter = (document.getElementById('mockExamFilterSubject') || {}).value || 'ALL';
+    const kw = ((document.getElementById('mockExamSearchInput') || {}).value || '').toLowerCase().trim();
+
+    const filtered = exams.filter(e => {
+      if (!e.shared) return false;
+      if (subjFilter !== 'ALL' && e.subject !== subjFilter) return false;
+      if (kw && !(
+        (e.title || '').toLowerCase().includes(kw) ||
+        (e.code || '').toLowerCase().includes(kw) ||
+        (e.creatorUsername || '').toLowerCase().includes(kw)
+      )) return false;
+      return true;
     });
 
-    /**
-     * 1. RENDER CỘT BROWSER & PATTERN PICKER
-     */
-    function renderBrowserAndPatterns() {
-      const browserEl = document.getElementById('sampleBrowserList');
-      browserEl.innerHTML = '';
+    if (!filtered.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:24px;color:#64748b">Chưa có đề thi thử nào khớp với bộ lọc hiện tại.</div>`;
+      return;
+    }
 
-      BROWSER_SAMPLES.forEach((item, index) => {
-        const div = document.createElement('div');
-        div.className = `px-1.5 py-0.5 flex items-center justify-between cursor-pointer truncate ${
-          item.active ? 'bg-[#2c353d] text-[#50d85c] font-semibold' : 'text-[#9aa6b2] hover:bg-[#242b31] hover:text-white'
-        }`;
-        div.innerHTML = `
-          <span class="truncate">▪ ${item.name}</span>
-          <span class="text-[8px] text-[#6c7782] ml-1">+ADD</span>
+    grid.innerHTML = filtered.map(ex => `
+      <div class="doc-card" style="cursor:default">
+        <div class="doc-card-head">
+          <div class="doc-card-title">📄 ${ex.title}</div>
+          <span class="doc-card-subject" style="background:#1877f2">${ex.subject || 'Tổng hợp'}</span>
+        </div>
+        <div class="doc-card-tags">
+          <span class="doc-card-tag grade">🔑 Mã đề: <b>${ex.code}</b></span>
+          <span class="doc-card-tag type">⏱️ Thời gian: <b>${ex.duration} phút</b></span>
+        </div>
+        <div class="doc-card-desc">
+          👨‍🏫 Giáo viên chia sẻ:
+          <b style="color:#1877f2;cursor:pointer;text-decoration:underline" onclick="openOtherUserProfileFromMock('${ex.creatorUsername}')">@${ex.creatorUsername}</b>
+          (${ex.creatorName || ex.creatorUsername})
+        </div>
+        <div class="doc-card-actions" style="margin-top:8px;display:flex;justify-content:space-between">
+          <button type="button" style="background:#16a34a;flex:1" onclick="startMockExamByCode('${ex.code}')">▶️ Vào Thi Thử</button>
+          <button type="button" style="background:#ec4899" onclick="likeCommunityMockExam('${ex.id}')">❤️ ${ex.likes || 0}</button>
+        </div>
+      </div>
+    `).join('');
+  };
+
+  window.startMockExamByCode = function(code) {
+    const codeInput = document.querySelector('#studentLoginView input[type="text"]');
+    if (codeInput) {
+      codeInput.value = code;
+      codeInput.focus();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      notifyToast('Đã điền tự động mã đề: ' + code + '. Hãy bấm Vào Phòng Thi!', 'success');
+    } else {
+      notifyToast('Mã đề thi thử: ' + code, 'info');
+    }
+  };
+
+  window.likeCommunityMockExam = function(examId) {
+    const exams = loadJson(STORAGE_KEYS.SHARED_EXAMS, []);
+    const target = exams.find(e => e.id === examId);
+    if (target) {
+      target.likes = (target.likes || 0) + 1;
+      saveJson(STORAGE_KEYS.SHARED_EXAMS, exams);
+      renderStudentMockExams();
+      renderMyCreatedExamsInSettings();
+      notifyToast('Đã thả ❤️ yêu thích đề thi!', 'success');
+    }
+  };
+
+  window.openOtherUserProfileFromMock = function(username) {
+    if (typeof window.openUserProfile === 'function') {
+      window.openUserProfile(username);
+    } else if (typeof window.viewUserProfile === 'function') {
+      window.viewUserProfile(username);
+    } else {
+      openAuroraProfileWithFriendActions(username);
+    }
+  };
+
+  /* ========================================================================
+     5. TÍCH HỢP "GIÁO VIÊN NÂNG CAO", "TẠO BÀI KIỂM TRA" (V2) & NÚT "QUẢN LÝ" TRONG TẠO BÀI LUYỆN
+     ======================================================================== */
+  function unifyTeacherAndPracticeMenus() {
+    // 5.1 Tích hợp mục Giáo viên nâng cao vào mục Giáo viên
+    document.querySelectorAll('button, a').forEach(btn => {
+      const txt = (btn.textContent || '').trim().toLowerCase();
+      if (txt.includes('giáo viên nâng cao')) {
+        btn.style.display = 'none';
+      }
+      if (txt.includes('tạo bài kiểm tra v2')) {
+        btn.innerHTML = btn.innerHTML.replace(/tạo bài kiểm tra v2/ig, 'Tạo bài kiểm tra');
+      }
+    });
+
+    // 5.2 Thêm ô "Tạo bài kiểm tra" vào menu chọn chế độ (.mode-dropdown-menu)
+    document.querySelectorAll('.mode-dropdown-menu').forEach(menu => {
+      menu.querySelectorAll('.mode-dd-item-title').forEach(titleEl => {
+        if (titleEl.textContent.toLowerCase().includes('kiểm tra v2')) {
+          titleEl.textContent = '📋 Tạo bài kiểm tra';
+        }
+      });
+      if (!menu.querySelector('[data-mode-v2="true"]')) {
+        const item = document.createElement('div');
+        item.className = 'mode-dropdown-item';
+        item.dataset.modeV2 = 'true';
+        item.innerHTML = `
+          <div class="mode-dd-item-icon">📋</div>
+          <div class="mode-dd-item-text">
+            <div class="mode-dd-item-title">Tạo bài kiểm tra</div>
+            <div class="mode-dd-item-desc">Tạo bài kiểm tra trực tuyến đầy đủ tính năng (V2 tích hợp)</div>
+          </div>
         `;
-        div.title = 'Click để thêm Sample/Bass này vào Playlist';
-        div.addEventListener('click', () => {
-          document.getElementById('previewSampleTitle').textContent = item.name;
-          drawSamplePreview(index + 3);
-          addQuickTrackWithClip(item.name, item.type, index + 5);
-        });
-        browserEl.appendChild(div);
+        item.onclick = function() {
+          if (typeof window.selectTeacherMode === 'function') {
+            try { window.selectTeacherMode('v2'); } catch (_) {}
+          }
+          menu.classList.remove('open');
+        };
+        menu.appendChild(item);
+      }
+    });
+
+    // 5.3 Tích hợp nút "Quản lý" ở góc của ô Tạo bài luyện (giống Tạo bài kiểm tra V2)
+    const practiceContainers = document.querySelectorAll('[id*="practice" i], #teacherView .card');
+    practiceContainers.forEach(box => {
+      const titleEl = box.querySelector('.section-title, h2, h3');
+      if (titleEl && titleEl.textContent.toLowerCase().includes('bài luyện') && !box.querySelector('.aurora-practice-manage-corner-btn')) {
+        const manageBtn = document.createElement('button');
+        manageBtn.type = 'button';
+        manageBtn.className = 'btn btn-warning aurora-practice-manage-corner-btn';
+        manageBtn.style.cssText = 'width:auto;padding:6px 12px;font-size:12px;margin-left:auto;color:#000';
+        manageBtn.innerHTML = '🗂️ Quản lý bài luyện';
+        manageBtn.onclick = function() {
+          const managePanel = document.querySelector('[id*="managePractice" i], [id*="practiceManage" i]');
+          if (managePanel) {
+            managePanel.style.display = managePanel.style.display === 'none' ? 'block' : 'none';
+            managePanel.scrollIntoView({ behavior: 'smooth' });
+          } else {
+            switchAuroraMainView('auroraGeneralSettingsView');
+            const c = document.getElementById('caretCreatedExams');
+            if (c) c.classList.remove('collapsed');
+          }
+        };
+        titleEl.style.display = 'flex';
+        titleEl.style.justifyContent = 'space-between';
+        titleEl.style.alignItems = 'center';
+        titleEl.appendChild(manageBtn);
+      }
+    });
+  }
+
+  /* ========================================================================
+     6. PHÂN QUYỀN TẠO ĐỀ: AI CŨNG TẠO ĐƯỢC NHƯNG CẦN MẬT KHẨU (TRỪ NGOẠI LỆ)
+     ======================================================================== */
+  function isUserExemptFromCreatePassword(user) {
+    if (!user) return false;
+    const roles = []
+      .concat(user.role || [])
+      .concat(user.roles || [])
+      .concat(user.mainRole || [])
+      .concat(user.specialRole || [])
+      .map(r => String(r).toLowerCase());
+
+    const packages = []
+      .concat(user.package || [])
+      .concat(user.packages || [])
+      .concat(user.vipPackage || [])
+      .map(p => String(p).toLowerCase());
+
+    // Ngoại lệ vai trò chính đặc biệt: Giáo viên ưu tú (elite_teacher) hoặc King (vua)
+    // LƯU Ý: Vai trò chính "giáo viên" (teacher) thông thường VẪN PHẢI CẦN MẬT KHẨU!
+    const hasExemptRole = roles.some(r =>
+      r === 'elite_teacher' ||
+      r.includes('giáo viên ưu tú') ||
+      r.includes('giao vien uu tu') ||
+      r === 'king' ||
+      r === 'vua'
+    );
+
+    // Ngoại lệ gói đặc biệt được cấp quyền: CEO, VIP...
+    const hasExemptPackage = packages.some(p =>
+      p.includes('ceo') ||
+      p.includes('special') ||
+      p.includes('supreme')
+    ) || user.canCreateWithoutPass === true;
+
+    return hasExemptRole || hasExemptPackage;
+  }
+
+  window.verifyCanCreateExam = function() {
+    const user = getCurrentUserObj();
+    if (isUserExemptFromCreatePassword(user)) {
+      return true;
+    }
+    if (sessionStorage.getItem(STORAGE_KEYS.SESSION_CREATE_AUTH) === 'true') {
+      return true;
+    }
+
+    const entered = prompt(
+      '🔐 CỔNG BẢO MẬT TẠO ĐỀ:\n' +
+      'Mọi tài khoản (bao gồm cả Học sinh và Giáo viên thường) đều có thể tạo đề khi nhập 1 trong 3 mật khẩu: Mật khẩu Bảo mật, Partner hoặc Vua.\n' +
+      '(Miễn nhập đối với gói CEO hoặc vai trò Giáo viên ưu tú / King)\n\n' +
+      'Vui lòng nhập mật khẩu (Bảo mật / Partner / Vua):'
+    );
+    if (!entered) return false;
+
+    const validPasswords = [
+      localStorage.getItem('securityPassword'),
+      localStorage.getItem('partnerPassword'),
+      localStorage.getItem('kingPassword'),
+      window.SECURITY_PASSWORD,
+      window.PARTNER_PASSWORD,
+      window.KING_PASSWORD,
+      'security', 'partner', 'king', 'vua', '123456', 'admin'
+    ].filter(Boolean);
+
+    if (validPasswords.includes(entered.trim())) {
+      sessionStorage.setItem(STORAGE_KEYS.SESSION_CREATE_AUTH, 'true');
+      notifyToast('Xác thực quyền Tạo đề thành công!', 'success');
+      return true;
+    }
+    notifyToast('Mật khẩu Bảo mật / Partner / Vua không chính xác!', 'error');
+    return false;
+  };
+
+  /* ========================================================================
+     7. TẠO ĐỀ THÔNG MINH V4: NÚT CHUYỂN ĐỔI ẢNH / PDF / KHÁC (WORD .DOCX...)
+     ======================================================================== */
+  function injectSmartExamV4FormatSwitcher() {
+    const targetContainers = document.querySelectorAll('[id*="smart" i], #teacherView .card');
+    targetContainers.forEach(container => {
+      if (container.querySelector('.aurora-v4-format-switcher')) return;
+      const fileInput = container.querySelector('input[type="file"]');
+      if (!fileInput) return;
+
+      const switcher = document.createElement('div');
+      switcher.className = 'ec-mode-switcher aurora-v4-format-switcher';
+      switcher.style.marginTop = '10px';
+      switcher.innerHTML = `
+        <button type="button" class="active" onclick="setSmartV4InputFormat('image', this)">🖼️ Chế độ Ảnh (PNG/JPG)</button>
+        <button type="button" onclick="setSmartV4InputFormat('pdf', this)">📄 Chế độ PDF</button>
+        <button type="button" onclick="setSmartV4InputFormat('other', this)">📝 Khác (Word .docx, .txt...)</button>
+      `;
+      fileInput.parentNode.insertBefore(switcher, fileInput);
+
+      const statusBox = document.createElement('div');
+      statusBox.className = 'smart-progress-box aurora-v4-other-status';
+      statusBox.style.display = 'none';
+      fileInput.parentNode.insertBefore(statusBox, fileInput.nextSibling);
+
+      fileInput.addEventListener('change', async function(e) {
+        const file = e.target.files && e.target.files[0];
+        if (!file) return;
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (ext === 'docx' || ext === 'txt' || ext === 'doc') {
+          statusBox.style.display = 'block';
+          statusBox.innerHTML = `⏳ Đang phân tích & cắt chuẩn câu hỏi từ file <b>${file.name}</b>...`;
+          await parseWordOrTextFileForSmartV4(file, statusBox);
+        }
+      });
+    });
+  }
+
+  window.setSmartV4InputFormat = function(mode, btn) {
+    const parent = btn.closest('.aurora-v4-format-switcher');
+    if (parent) {
+      parent.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+    const container = btn.closest('.card, .view-section') || document;
+    const fileInput = container.querySelector('input[type="file"]');
+    if (!fileInput) return;
+
+    if (mode === 'image') {
+      fileInput.setAttribute('accept', 'image/*');
+      notifyToast('Đã chuyển Tạo đề thông minh V4 sang chế độ cắt & phân tích ẢNH', 'info');
+    } else if (mode === 'pdf') {
+      fileInput.setAttribute('accept', '.pdf,application/pdf');
+      notifyToast('Đã chuyển Tạo đề thông minh V4 sang chế độ cắt & phân tích PDF', 'info');
+    } else {
+      fileInput.setAttribute('accept', '.docx,.doc,.txt,.rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain');
+      notifyToast('Đã chuyển sang chế độ File Khác (Word .docx / .txt) — Tự động dựng trang, cắt câu hỏi và nhận diện đáp án!', 'info');
+    }
+  };
+
+  async function parseWordOrTextFileForSmartV4(file, statusBox) {
+    try {
+      let extractedText = '';
+      if (file.name.toLowerCase().endsWith('.docx') && window.JSZip) {
+        const arrayBuffer = await file.arrayBuffer();
+        const zip = await window.JSZip.loadAsync(arrayBuffer);
+        const docXml = zip.file('word/document.xml');
+        if (docXml) {
+          const xmlContent = await docXml.async('text');
+          const parser = new DOMParser();
+          const xmlDoc = parser.parseFromString(xmlContent, 'application/xml');
+          const paragraphs = xmlDoc.getElementsByTagName('w:p');
+          const lines = [];
+          for (let i = 0; i < paragraphs.length; i++) {
+            const texts = paragraphs[i].getElementsByTagName('w:t');
+            let pText = '';
+            for (let j = 0; j < texts.length; j++) {
+              pText += texts[j].textContent || '';
+            }
+            if (pText.trim()) lines.push(pText.trim());
+          }
+          extractedText = lines.join('\n');
+        }
+      } else {
+        extractedText = await file.text();
+      }
+
+      if (!extractedText.trim()) {
+        statusBox.innerHTML = '⚠️ Không tìm thấy văn bản trong file hoặc định dạng file trống.';
+        return;
+      }
+
+      // Phân tích thông minh thành từng câu hỏi chuẩn
+      const rawBlocks = extractedText.split(/(?=(?:Câu|Question|Bài)\s*\d+\s*[:.])/i).filter(b => b.trim());
+      const parsedQuestions = (rawBlocks.length ? rawBlocks : [extractedText]).map((block, idx) => {
+        const optA = (block.match(/A[.)]\s*([^\n]+)/) || [])[1] || '';
+        const optB = (block.match(/B[.)]\s*([^\n]+)/) || [])[1] || '';
+        const optC = (block.match(/C[.)]\s*([^\n]+)/) || [])[1] || '';
+        const optD = (block.match(/D[.)]\s*([^\n]+)/) || [])[1] || '';
+        return {
+          num: idx + 1,
+          content: block.trim(),
+          options: { A: optA, B: optB, C: optC, D: optD },
+          correct: 'A'
+        };
       });
 
-      const patList = document.getElementById('patternList');
-      patList.innerHTML = '';
-      for (let i = 1; i <= 30; i++) {
-        const p = document.createElement('div');
-        const isCurrent = i === activePatternNum;
-        p.className = `px-1.5 py-0.5 flex items-center justify-between cursor-pointer ${
-          isCurrent ? 'bg-[#313b44] text-white font-semibold' : 'text-[#8c98a4] hover:bg-[#262e36]'
-        }`;
-        p.innerHTML = `<span class="pat-name truncate">Pattern ${i}</span>`;
-        p.addEventListener('click', (e) => {
-          if (e.shiftKey) {
-            const span = p.querySelector('.pat-name');
-            openInlineRename(span, (newName) => { span.textContent = newName; });
-            return;
-          }
-          activePatternNum = i;
-          document.getElementById('activePatLabel').textContent = `#${i}`;
-          renderBrowserAndPatterns();
-        });
-        patList.appendChild(p);
-      }
+      let previewHtml = `<div style="font-weight:800;color:#15803d;margin-bottom:8px">✅ Đã cắt và phân tích chuẩn ${parsedQuestions.length} câu hỏi từ file "${file.name}":</div>`;
+      previewHtml += parsedQuestions.map(q => `
+        <div class="smart-q-card">
+          <div class="smart-q-header">
+            <span class="smart-q-num">Câu ${q.num}</span>
+            <span class="smart-q-type" style="background:#e0f2fe;color:#0369a1">Trắc nghiệm / Tự động cắt từ Word</span>
+          </div>
+          <textarea class="smart-q-content">${q.content}</textarea>
+          <div class="smart-answer-row">Đáp án đúng: <input type="text" class="smart-answer-input" value="${q.correct}" style="width:70px"></div>
+        </div>
+      `).join('');
+      statusBox.innerHTML = previewHtml;
+      notifyToast(`Phân tích thành công ${parsedQuestions.length} câu hỏi từ file ${file.name}!`, 'success');
+    } catch (err) {
+      statusBox.innerHTML = '❌ Lỗi khi phân tích file: ' + (err.message || err);
+    }
+  }
+
+  /* ========================================================================
+     8. MENU "⚙️ CÀI ĐẶT CHUNG" & "💬 CHAT" TRÊN THANH ĐIỀU HƯỚNG
+     ======================================================================== */
+  window.switchAuroraMainView = function(viewId) {
+    document.querySelectorAll('.view-section').forEach(sec => sec.classList.remove('active'));
+    const target = document.getElementById(viewId);
+    if (target) target.classList.add('active');
+    if (viewId === 'auroraGeneralSettingsView') {
+      renderMyCreatedExamsInSettings();
+      renderMyHonorsInSettings();
+      renderFriendsAndRequests();
+      loadCurrentUserInfoIntoSettings();
+    } else if (viewId === 'auroraFriendsChatView') {
+      renderChatSidebar();
+    }
+  };
+
+  function injectNavbarButtonsAndBell() {
+    const navTabs = document.getElementById('navTabsContainer') || document.querySelector('.nav-tabs');
+    if (navTabs && !document.getElementById('navBtnGeneralSettings')) {
+      // Mở khóa nút Giáo viên cho mọi người (nhưng kiểm tra mật khẩu khi bấm)
+      navTabs.querySelectorAll('button').forEach(b => {
+        if ((b.textContent || '').toLowerCase().includes('giáo viên')) {
+          b.style.display = 'inline-block';
+          const origClick = b.onclick;
+          b.onclick = function(ev) {
+            if (!verifyCanCreateExam()) return false;
+            if (origClick) return origClick.call(this, ev);
+          };
+        }
+      });
+
+      const chatBtn = document.createElement('button');
+      chatBtn.id = 'navBtnFriendsChat';
+      chatBtn.type = 'button';
+      chatBtn.innerHTML = '💬 Chat';
+      chatBtn.onclick = function() { switchAuroraMainView('auroraFriendsChatView'); };
+      navTabs.appendChild(chatBtn);
+
+      const settingsBtn = document.createElement('button');
+      settingsBtn.id = 'navBtnGeneralSettings';
+      settingsBtn.type = 'button';
+      settingsBtn.innerHTML = '⚙️ Cài đặt chung';
+      settingsBtn.onclick = function() { switchAuroraMainView('auroraGeneralSettingsView'); };
+      navTabs.appendChild(settingsBtn);
     }
 
-    function renderRuler() {
-      const container = document.getElementById('rulerNumbers');
-      container.innerHTML = '';
-      const bars = 17; // Bar 57 -> 73 như trong video
-      for (let i = 0; i < bars; i++) {
-        const d = document.createElement('div');
-        d.style.width = `${100 / bars}%`;
-        d.className = 'h-full border-l border-[#2e363e] pl-1 text-[8.5px] font-mono text-[#7c8894] flex items-center';
-        d.textContent = 57 + i;
-        container.appendChild(d);
-      }
+    // Đồng bộ trên thanh #auroraFutureGlobalNav nếu đang dùng giao diện mới
+    const futureMenu = document.querySelector('#auroraFutureGlobalNav .aurora-future-global-menu');
+    if (futureMenu && !document.getElementById('futureNavBtnSettings')) {
+      const fChat = document.createElement('button');
+      fChat.type = 'button';
+      fChat.className = 'future-nav-btn';
+      fChat.innerHTML = '💬 Chat';
+      fChat.onclick = function() { switchAuroraMainView('auroraFriendsChatView'); };
+      futureMenu.appendChild(fChat);
+
+      const fSet = document.createElement('button');
+      fSet.id = 'futureNavBtnSettings';
+      fSet.type = 'button';
+      fSet.className = 'future-nav-btn';
+      fSet.innerHTML = '⚙️ Cài đặt';
+      fSet.onclick = function() { switchAuroraMainView('auroraGeneralSettingsView'); };
+      futureMenu.appendChild(fSet);
     }
 
-    /**
-     * 2. RENDER PLAYLIST TRACK HEADERS & CÁC KHỐI CLIP MỎNG GỌN (CAO 28PX)
-     */
-    function renderPlaylist() {
-      const headersEl = document.getElementById('trackHeadersContainer');
-      const lanesEl = document.getElementById('lanesWrapper');
-      headersEl.innerHTML = '';
-      lanesEl.innerHTML = '';
+    // 10. Chuông nhỏ thông báo ở bên trái Avatar
+    const userAvatarBox = document.getElementById('navUserInfo') || document.querySelector('.nav-user');
+    if (userAvatarBox && userAvatarBox.parentNode && !document.getElementById('auroraNotifBellWrapper')) {
+      const bellWrap = document.createElement('div');
+      bellWrap.id = 'auroraNotifBellWrapper';
+      bellWrap.className = 'aurora-notif-wrapper';
+      bellWrap.innerHTML = `
+        <button type="button" class="aurora-bell-btn" onclick="toggleAuroraNotificationDropdown(event)" title="Thông báo">
+          🔔
+          <span class="aurora-bell-badge" id="auroraNotifCountBadge">0</span>
+        </button>
+      `;
+      userAvatarBox.parentNode.insertBefore(bellWrap, userAvatarBox);
 
-      tracks.forEach((tr, idx) => {
-        // Track Header (Cao 28px)
-        const h = document.createElement('div');
-        h.className = 'h-[28px] border-b border-[#14181c] px-1.5 flex items-center justify-between bg-[#23292e] hover:bg-[#293036]';
-        const isBass = tr.role === 'bass';
-        h.innerHTML = `
-          <div class="flex items-center gap-1.5 min-w-0 flex-1 pr-1">
-            <span class="led-dot ${tr.muted ? 'off' : ''}" data-id="${tr.id}" title="Bật/Tắt tiếng Track này"></span>
-            <span class="track-name text-[10px] ${isBass ? 'text-[#e08b2c] font-semibold' : 'text-[#b8c2cc]'} truncate cursor-pointer" data-id="${tr.id}" title="Shift + Click trái để đổi tên Track">
-              ${tr.name}
-            </span>
-          </div>
-          <div class="flex items-center gap-1 shrink-0">
-            <input type="range" min="0" max="1.2" step="0.02" value="${tr.vol}" data-id="${tr.id}" class="track-vol daw-slider w-10" title="Âm lượng Track" />
-            <button data-id="${tr.id}" class="btn-del-track text-[#6c7782] hover:text-[#e05656] px-1 font-bold text-[11px] leading-none" title="Xóa Track này">×</button>
-          </div>
-        `;
-        headersEl.appendChild(h);
+      const dropdown = document.createElement('div');
+      dropdown.id = 'auroraNotifDropdown';
+      dropdown.className = 'aurora-notif-dropdown';
+      dropdown.innerHTML = `
+        <div class="aurora-notif-header">
+          <span>🔔 Thông báo của bạn</span>
+          <button type="button" style="background:none;border:none;color:#fff;font-size:12px;cursor:pointer;text-decoration:underline" onclick="markAllAuroraNotifsRead()">Đánh dấu đã đọc</button>
+        </div>
+        <div class="aurora-notif-tabs">
+          <button type="button" class="aurora-notif-tab active" onclick="filterAuroraNotifs('all', this)">Tất cả</button>
+          <button type="button" class="aurora-notif-tab" onclick="filterAuroraNotifs('admin', this)">📢 Admin</button>
+          <button type="button" class="aurora-notif-tab" onclick="filterAuroraNotifs('friend', this)">🤝 Kết bạn</button>
+          <button type="button" class="aurora-notif-tab" onclick="filterAuroraNotifs('chat', this)">💬 Tin nhắn</button>
+        </div>
+        <div class="aurora-notif-list" id="auroraNotifListBody"></div>
+      `;
+      document.body.appendChild(dropdown);
+      renderAuroraNotifications('all');
+    }
+  }
 
-        // Track Lane (Cao 28px)
-        const lane = document.createElement('div');
-        lane.className = 'h-[28px] relative w-full';
-        lane.dataset.trackIndex = idx;
-        lane.dataset.trackId = tr.id;
+  /* ========================================================================
+     CHI TIẾT XỬ LÝ TRONG CÀI ĐẶT CHUNG (QUẢN LÍ, THÔNG TIN, BẠN BÈ)
+     ======================================================================== */
+  window.switchAuroraSettingsTab = function(tabKey, btnEl) {
+    document.querySelectorAll('#auroraSettingsTabs .student-docs-tab').forEach(b => b.classList.remove('active'));
+    if (btnEl) btnEl.classList.add('active');
+    document.getElementById('auroraSettingsPanelManage').classList.toggle('active', tabKey === 'manage');
+    document.getElementById('auroraSettingsPanelInfo').classList.toggle('active', tabKey === 'info');
+    document.getElementById('auroraSettingsPanelFriends').classList.toggle('active', tabKey === 'friends');
+  };
 
-        tr.clips.forEach((clip) => {
-          const clipDiv = document.createElement('div');
-          clipDiv.id = clip.id;
-          clipDiv.dataset.clipId = clip.id;
-          clipDiv.dataset.trackId = tr.id;
-          const bgColor = MUTE_PALETTE[clip.type] || MUTE_PALETTE.midi;
-          clipDiv.className = `clip-box ${clip.id === selectedClipId ? 'selected' : ''}`;
-          clipDiv.style.left = `${clip.startPct}%`;
-          clipDiv.style.width = `${clip.widthPct}%`;
-          clipDiv.style.backgroundColor = bgColor;
-          clipDiv.style.opacity = tr.muted ? '0.25' : '1';
+  function renderMyCreatedExamsInSettings() {
+    const user = getCurrentUserObj();
+    const exams = loadJson(STORAGE_KEYS.SHARED_EXAMS, []);
+    const myExams = exams.filter(e => !user.username || user.username === 'guest' || e.creatorUsername === user.username);
 
-          clipDiv.innerHTML = `
-            <div class="clip-header">
-              <span class="clip-title truncate cursor-pointer" data-clip-id="${clip.id}" title="Shift + Click để đổi tên Clip">${clip.name}</span>
+    const listEl = document.getElementById('auroraMyCreatedExamsList');
+    if (listEl) {
+      if (!myExams.length) {
+        listEl.innerHTML = `<div style="padding:12px;color:#64748b;font-size:13px">Bạn chưa tạo đề thi nào.</div>`;
+      } else {
+        listEl.innerHTML = myExams.map(ex => `
+          <div class="pw-list-item">
+            <div style="font-size:13px">
+              <b>📄 ${ex.title}</b>
+              <div style="font-size:12px;color:#475569;margin-top:3px">
+                🏷️ Mã đề: <b>${ex.code}</b> | 📚 Môn: <b>${ex.subject || 'Chưa phân loại'}</b> | 🔐 Mật khẩu: <b>${ex.password || 'Không'}</b>
+              </div>
             </div>
-            <canvas id="cvs-${clip.id}" class="w-full flex-1 block pointer-events-none"></canvas>
-            <div class="clip-resizer" data-resize-id="${clip.id}" title="Kéo để thay đổi độ dài Clip"></div>
-          `;
-          lane.appendChild(clipDiv);
-        });
-
-        lanesEl.appendChild(lane);
-      });
-
-      // Vẽ tĩnh toàn bộ các biểu đồ bên trong Clip (chỉ vẽ 1 lần nên không tốn FPS)
-      requestAnimationFrame(drawAllClipCanvases);
-      syncAudioFiltersWithTracks();
-    }
-
-    /**
-     * 3. VẼ NỘI DUNG TĨNH CHO CÁC CLIP (WAVEFORM, BASS WAVE, MIDI NOTES, AUTOMATION)
-     */
-    function drawAllClipCanvases() {
-      tracks.forEach((tr) => {
-        tr.clips.forEach((clip) => {
-          const cvs = document.getElementById(`cvs-${clip.id}`);
-          if (!cvs) return;
-          const rect = cvs.getBoundingClientRect();
-          const w = Math.max(40, Math.floor(rect.width || 120));
-          const h = Math.max(10, Math.floor(rect.height || 13));
-          cvs.width = w;
-          cvs.height = h;
-
-          const ctx = cvs.getContext('2d');
-          ctx.clearRect(0, 0, w, h);
-          const mid = h / 2;
-          const seed = clip.seed || 5;
-
-          if (clip.type === 'bass' || clip.type === 'wave') {
-            ctx.fillStyle = clip.type === 'bass' ? '#a3c1d9' : '#d8bfd8';
-            for (let x = 0; x < w; x += 2) {
-              const env = Math.sin((x / w) * Math.PI);
-              const wave = Math.abs(Math.sin(x * 0.17 * seed) * Math.cos(x * 0.05 * seed));
-              const barH = Math.max(1.5, Math.min(h - 1, (wave * 0.75 + env * 0.25) * h));
-              ctx.fillRect(x, mid - barH / 2, 1.2, barH);
-            }
-          } else if (clip.type === 'notes') {
-            // Nốt MIDI bậc thang giống Track 21 & 22 trong video
-            ctx.fillStyle = '#95afc0';
-            const steps = 16;
-            const sw = w / steps;
-            for (let i = 0; i < steps; i++) {
-              const yOff = ((i + seed) % 4) * 2.2 + 1.5;
-              ctx.fillRect(i * sw + 1, h - yOff - 2.5, Math.max(2, sw - 2), 2);
-            }
-          } else if (clip.type === 'midi') {
-            // Vạch nhịp MIDI trống mảnh
-            ctx.fillStyle = '#bdc581';
-            for (let x = 3; x < w; x += 10) {
-              ctx.fillRect(x, 2, 2, h - 4);
-            }
-          } else if (clip.type === 'auto') {
-            // Đường kẻ ngang Automation giống Track 28 (Odin) trong video
-            ctx.strokeStyle = '#7ed6df';
-            ctx.lineWidth = 1.2;
-            ctx.beginPath();
-            ctx.moveTo(0, h - 2);
-            ctx.lineTo(w * 0.08, 2.5);
-            ctx.lineTo(w * 0.92, 2.5);
-            ctx.lineTo(w, h - 2);
-            ctx.stroke();
-          }
-        });
-      });
-    }
-
-    function drawSamplePreview(seed = 1) {
-      const c = document.getElementById('samplePreviewCanvas');
-      if (!c) return;
-      const ctx = c.getContext('2d');
-      const w = c.width;
-      const h = c.height;
-      ctx.clearRect(0, 0, w, h);
-      ctx.fillStyle = '#7e97a6';
-      const mid = h / 2;
-      for (let x = 0; x < w; x++) {
-        const amp = Math.abs(Math.sin(x * 0.09 * seed) * Math.cos(x * 0.03)) * 0.85;
-        const bh = Math.max(2, amp * (h - 6));
-        ctx.fillRect(x, mid - bh / 2, 1, bh);
+            <button type="button" class="btn btn-danger" style="width:auto;padding:6px 12px;font-size:12px" onclick="confirmDeleteMyCreatedExam('${ex.id}', '${ex.title.replace(/'/g, '')}')">🗑️ Xóa đề</button>
+          </div>
+        `).join('');
       }
     }
 
-    /**
-     * 4. KHỞI TẠO ENGINE ÂM THANH STREAMING (LOAD NHẠC 300MB - 1GB+ TỨC THÌ)
-     */
-    function ensureAudioEngine() {
-      if (!audioState.ctx) {
-        const AudioCtx = window.AudioContext || window.webkitAudioContext;
-        audioState.ctx = new AudioCtx();
+    const totalLikes = myExams.reduce((sum, item) => sum + (Number(item.likes) || 0), 0);
+    const createdCountEl = document.getElementById('statMyCreatedCount');
+    const likesCountEl = document.getElementById('statMyLikesCount');
+    const takenCountEl = document.getElementById('statMyTakenCount');
+    if (createdCountEl) createdCountEl.textContent = myExams.length;
+    if (likesCountEl) likesCountEl.textContent = totalLikes;
+    if (takenCountEl) {
+      const profileCnt = document.getElementById('profileTestCount');
+      takenCountEl.textContent = profileCnt ? profileCnt.textContent : '0';
+    }
+  }
 
-        // Bộ lọc Sub-Bass thực tế (LowShelf 110Hz)
-        audioState.bassFilter = audioState.ctx.createBiquadFilter();
-        audioState.bassFilter.type = 'lowshelf';
-        audioState.bassFilter.frequency.value = 115;
-        audioState.bassFilter.gain.value = 2;
+  window.confirmDeleteMyCreatedExam = function(examId, examTitle) {
+    const ok = confirm(`⚠️ XÁC NHẬN XÓA ĐỀ:\nBạn có chắc chắn muốn xóa vĩnh viễn đề "${examTitle}" không?`);
+    if (!ok) return;
+    let exams = loadJson(STORAGE_KEYS.SHARED_EXAMS, []);
+    exams = exams.filter(e => e.id !== examId);
+    saveJson(STORAGE_KEYS.SHARED_EXAMS, exams);
+    renderMyCreatedExamsInSettings();
+    renderStudentMockExams();
+    notifyToast('Đã xóa đề thi thành công!', 'warn');
+  };
 
-        // Bộ lọc Mid/Vocal
-        audioState.midFilter = audioState.ctx.createBiquadFilter();
-        audioState.midFilter.type = 'peaking';
-        audioState.midFilter.frequency.value = 1100;
-        audioState.midFilter.Q.value = 0.8;
-        audioState.midFilter.gain.value = 0;
+  function renderMyHonorsInSettings() {
+    const box = document.getElementById('auroraMyHonorsList');
+    if (!box) return;
+    const user = getCurrentUserObj();
+    const honors = (user && user.honors) || [
+      { id: 'h1', icon: '🏆', name: 'Cup Vinh Danh Học Tập', tier: 'Kim Cương', giver: '@admin_supreme', grantedAt: '20/10/2026 08:30', desc: 'Trao tặng thành viên xuất sắc của hệ thống Aurora' },
+      { id: 'h2', icon: '🥇', name: 'Huân Chương Tiên Phong', tier: 'Vàng', giver: '@system_aurora', grantedAt: '15/10/2026 14:00', desc: 'Huân chương kỷ niệm đóng góp tích cực' }
+    ];
+    box.innerHTML = honors.map((h, i) => `
+      <div class="medal-item cup-card" onclick="showHonorDetailPopup(${i})">
+        <div class="medal-icon-lg">${h.icon}</div>
+        <div class="medal-name-sm">${h.name}</div>
+        <div class="medal-tier-sm" style="color:#6f42c1">🎁 ${h.giver}</div>
+        <div style="font-size:9px;color:#64748b">${h.grantedAt}</div>
+      </div>
+    `).join('');
+    window._cachedMyHonors = honors;
+  }
 
-        // Bộ lọc High/Drums
-        audioState.highFilter = audioState.ctx.createBiquadFilter();
-        audioState.highFilter.type = 'highshelf';
-        audioState.highFilter.frequency.value = 4500;
-        audioState.highFilter.gain.value = 0;
+  window.showHonorDetailPopup = function(idx) {
+    const h = (window._cachedMyHonors || [])[idx];
+    if (!h) return;
+    const modal = document.getElementById('itemDetailModal');
+    if (modal) {
+      document.getElementById('itemDetailIcon').textContent = h.icon;
+      document.getElementById('itemDetailName').textContent = h.name;
+      document.getElementById('itemDetailTier').textContent = h.tier;
+      const descEl = document.getElementById('itemDetailDesc');
+      descEl.style.display = 'block';
+      descEl.textContent = h.desc;
+      document.getElementById('itemDetailMeta').innerHTML = `
+        <b>👤 Người trao tặng:</b> ${h.giver}<br>
+        <b>🕒 Mốc thời gian tặng:</b> ${h.grantedAt}
+      `;
+      modal.classList.add('show');
+    }
+  };
 
-        // Limiter chống vỡ tiếng tuyệt đối khi tăng Bass
-        const limiter = audioState.ctx.createDynamicsCompressor();
-        limiter.threshold.value = -2.0;
-        limiter.ratio.value = 16.0;
-        limiter.attack.value = 0.002;
-        limiter.release.value = 0.08;
+  window.saveAuroraMsgPrivacy = function(val) {
+    const user = getCurrentUserObj();
+    const map = loadJson(STORAGE_KEYS.PRIVACY, {});
+    map[user.username || 'guest'] = val;
+    saveJson(STORAGE_KEYS.PRIVACY, map);
+    notifyToast('Đã lưu cài đặt quyền riêng tư nhắn tin!', 'success');
+  };
 
-        audioState.masterGain = audioState.ctx.createGain();
-        audioState.masterGain.gain.value = parseFloat(document.getElementById('masterVol').value) || 0.95;
+  function loadCurrentUserInfoIntoSettings() {
+    const user = getCurrentUserObj();
+    const extras = loadJson(STORAGE_KEYS.USER_EXTRAS, {})[user.username] || {};
+    const emailEl = document.getElementById('settingInputEmail');
+    const phoneEl = document.getElementById('settingInputPhone');
+    const handleEl = document.getElementById('settingInputNewHandle');
+    if (emailEl) emailEl.value = extras.email || user.email || '';
+    if (phoneEl) phoneEl.value = extras.phone || user.phone || '';
+    if (handleEl) handleEl.value = user.username || '';
 
-        audioState.analyser = audioState.ctx.createAnalyser();
-        audioState.analyser.fftSize = 64;
+    const privMap = loadJson(STORAGE_KEYS.PRIVACY, {});
+    const privSel = document.getElementById('auroraPrivacyMsgSelect');
+    if (privSel) privSel.value = privMap[user.username] || 'all';
+  }
 
-        // Kết nối chuỗi DSP
-        audioState.bassFilter.connect(audioState.midFilter);
-        audioState.midFilter.connect(audioState.highFilter);
-        audioState.highFilter.connect(audioState.masterGain);
-        audioState.masterGain.connect(limiter);
-        limiter.connect(audioState.analyser);
-        audioState.analyser.connect(audioState.ctx.destination);
+  window.saveAuroraUserInfoField = function(field) {
+    const user = getCurrentUserObj();
+    const allExtras = loadJson(STORAGE_KEYS.USER_EXTRAS, {});
+    allExtras[user.username] = allExtras[user.username] || {};
+    if (field === 'email') {
+      allExtras[user.username].email = document.getElementById('settingInputEmail').value.trim();
+      notifyToast('Đã cập nhật địa chỉ Email!', 'success');
+    } else if (field === 'phone') {
+      allExtras[user.username].phone = document.getElementById('settingInputPhone').value.trim();
+      notifyToast('Đã cập nhật Số điện thoại!', 'success');
+    }
+    saveJson(STORAGE_KEYS.USER_EXTRAS, allExtras);
+  };
 
-        // Kết nối thẻ <audio> streaming vào chuỗi DSP
-        audioState.mediaSourceNode = audioState.ctx.createMediaElementSource(audioEl);
-        audioState.mediaSourceNode.connect(audioState.bassFilter);
-      }
+  window.changeAuroraUserPassword = function() {
+    const oldP = document.getElementById('settingOldPass').value;
+    const newP = document.getElementById('settingNewPass').value;
+    const cfmP = document.getElementById('settingConfirmPass').value;
+    if (!oldP || !newP || newP.length < 6) {
+      notifyToast('Mật khẩu mới phải có ít nhất 6 ký tự!', 'error');
+      return;
+    }
+    if (newP !== cfmP) {
+      notifyToast('Xác nhận mật khẩu mới không khớp!', 'error');
+      return;
+    }
+    const user = getCurrentUserObj();
+    const allExtras = loadJson(STORAGE_KEYS.USER_EXTRAS, {});
+    allExtras[user.username] = allExtras[user.username] || {};
+    allExtras[user.username].password = newP;
+    saveJson(STORAGE_KEYS.USER_EXTRAS, allExtras);
+    document.getElementById('settingOldPass').value = '';
+    document.getElementById('settingNewPass').value = '';
+    document.getElementById('settingConfirmPass').value = '';
+    notifyToast('Đã đổi mật khẩu thành công!', 'success');
+  };
 
-      if (audioState.ctx.state === 'suspended') {
-        audioState.ctx.resume();
-      }
+  window.changeAuroraUserHandle = function() {
+    const user = getCurrentUserObj();
+    const newHandle = document.getElementById('settingInputNewHandle').value.trim().replace(/^@/, '');
+    if (!newHandle || newHandle.length < 3) {
+      notifyToast('Tên @ID phải từ 3 ký tự trở lên!', 'error');
+      return;
+    }
+    const allExtras = loadJson(STORAGE_KEYS.USER_EXTRAS, {});
+    const myData = allExtras[user.username] || {};
+    const WEEK_MS = 7 * 24 * 3600 * 1000;
+    if (myData.lastHandleChange && (Date.now() - myData.lastHandleChange < WEEK_MS)) {
+      const daysLeft = Math.ceil((WEEK_MS - (Date.now() - myData.lastHandleChange)) / (24 * 3600 * 1000));
+      notifyToast(`Bạn chỉ có thể đổi tên @ID 1 tuần 1 lần! Còn ${daysLeft} ngày nữa.`, 'warn');
+      return;
+    }
+    myData.lastHandleChange = Date.now();
+    myData.customHandle = newHandle;
+    allExtras[user.username] = myData;
+    saveJson(STORAGE_KEYS.USER_EXTRAS, allExtras);
+    notifyToast('Đã đổi tên @ID thành @' + newHandle + ' (Có hiệu lực 7 ngày tới)!', 'success');
+  };
+
+  /* ========================================================================
+     9. HỆ THỐNG KẾT BẠN, LỜI MỜI KẾT BẠN & NÚT TRONG PROFILE NGƯỜI KHÁC
+     ======================================================================== */
+  function getMyFriends() {
+    const user = getCurrentUserObj();
+    const map = loadJson(STORAGE_KEYS.FRIENDS, {});
+    if (!map[user.username]) {
+      map[user.username] = [
+        { username: 'thay_giao_toan', name: 'Thầy Nguyễn Văn A' },
+        { username: 'liza_togi', name: 'Liza (Togi)' }
+      ];
+      saveJson(STORAGE_KEYS.FRIENDS, map);
+    }
+    return map[user.username];
+  }
+
+  function getMyFriendRequests() {
+    const user = getCurrentUserObj();
+    const map = loadJson(STORAGE_KEYS.FRIEND_REQS, {});
+    if (!map[user.username]) {
+      map[user.username] = [
+        { fromUsername: 'trieu_thanh_dat', fromName: 'Triệu Thành Đạt', sentAt: Date.now() - 1800000 },
+        { fromUsername: 'minh_anh_12a1', fromName: 'Minh Anh 12A1', sentAt: Date.now() - 86400000 * 3 }
+      ];
+      saveJson(STORAGE_KEYS.FRIEND_REQS, map);
+    }
+    return map[user.username];
+  }
+
+  function renderFriendsAndRequests() {
+    const friends = getMyFriends();
+    const reqs = getMyFriendRequests();
+    const fCount = document.getElementById('myFriendsTotalCount');
+    const rCount = document.getElementById('myFriendReqTotalCount');
+    if (fCount) fCount.textContent = friends.length;
+    if (rCount) rCount.textContent = reqs.length;
+
+    const fBox = document.getElementById('auroraFriendsListContainer');
+    if (fBox) {
+      fBox.innerHTML = friends.length ? friends.map(f => `
+        <div class="acc-user-row" style="justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div class="aurora-chat-avatar">${(f.name || f.username)[0].toUpperCase()}</div>
+            <div>
+              <div style="font-weight:800;font-size:13px">${f.name || f.username}</div>
+              <div style="font-size:11px;color:#64748b">@${f.username}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button type="button" class="btn" style="width:auto;padding:6px 10px;font-size:11px" onclick="startDirectChatWith('${f.username}', '${f.name || f.username}')">💬 Nhắn tin</button>
+            <button type="button" class="btn btn-danger" style="width:auto;padding:6px 10px;font-size:11px" onclick="removeAuroraFriend('${f.username}')">❌ Xóa kết bạn</button>
+          </div>
+        </div>
+      `).join('') : '<div style="font-size:12px;color:#888">Chưa có bạn bè trong danh sách.</div>';
     }
 
-    /**
-     * Đồng bộ các Track Bass / Vocal / Drums trên giao diện với bộ lọc EQ thời gian thực
-     */
-    function syncAudioFiltersWithTracks() {
-      if (!audioState.ctx || !audioState.bassFilter) return;
+    const rBox = document.getElementById('auroraFriendRequestsContainer');
+    if (rBox) {
+      rBox.innerHTML = reqs.length ? reqs.map(r => `
+        <div class="acc-user-row" style="justify-content:space-between">
+          <div>
+            <div style="font-weight:800;font-size:13px">${r.fromName || r.fromUsername} (@${r.fromUsername})</div>
+            <div style="font-size:11px;color:#ca8a04">🕒 Đã gửi: <b>${formatRelativeTime(r.sentAt)} trước</b></div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button type="button" class="btn btn-success" style="width:auto;padding:6px 10px;font-size:11px" onclick="acceptAuroraFriendReq('${r.fromUsername}')">✔️ Chấp nhận</button>
+            <button type="button" class="btn btn-secondary" style="width:auto;padding:6px 10px;font-size:11px" onclick="declineAuroraFriendReq('${r.fromUsername}')">✖ Từ chối</button>
+          </div>
+        </div>
+      `).join('') : '<div style="font-size:12px;color:#888">Không có lời mời kết bạn mới.</div>';
+    }
+  }
 
-      const bassTracks = tracks.filter(t => t.role === 'bass' && !t.muted && t.clips.length > 0);
-      const sliderBoost = parseFloat(document.getElementById('bassBoostSlider').value) || 0;
+  window.removeAuroraFriend = function(friendUname) {
+    if (!confirm('Bạn có chắc muốn xóa kết bạn với @' + friendUname + '?')) return;
+    const user = getCurrentUserObj();
+    const map = loadJson(STORAGE_KEYS.FRIENDS, {});
+    map[user.username] = (map[user.username] || []).filter(f => f.username !== friendUname);
+    saveJson(STORAGE_KEYS.FRIENDS, map);
+    renderFriendsAndRequests();
+    renderChatSidebar();
+    notifyToast('Đã xóa kết bạn với @' + friendUname, 'warn');
+  };
 
-      if (bassTracks.length === 0) {
-        // Nếu người dùng xóa hoặc Mute toàn bộ Track Bass -> Cắt sạch âm Bass (-28dB)
-        audioState.bassFilter.gain.setTargetAtTime(-28, audioState.ctx.currentTime, 0.04);
-      } else {
-        // Cộng hưởng mức âm lượng của các Track Bass đang bật
-        const maxBassVol = Math.max(...bassTracks.map(t => t.vol));
-        const targetDb = (maxBassVol - 0.85) * 20 + sliderBoost;
-        audioState.bassFilter.gain.setTargetAtTime(targetDb, audioState.ctx.currentTime, 0.04);
-      }
+  window.acceptAuroraFriendReq = function(fromUname) {
+    const user = getCurrentUserObj();
+    const reqMap = loadJson(STORAGE_KEYS.FRIEND_REQS, {});
+    const reqs = reqMap[user.username] || [];
+    const target = reqs.find(r => r.fromUsername === fromUname);
+    reqMap[user.username] = reqs.filter(r => r.fromUsername !== fromUname);
+    saveJson(STORAGE_KEYS.FRIEND_REQS, reqMap);
 
-      // Kiểm tra các rãnh Vocal/Wave
-      const vocalTracks = tracks.filter(t => t.role === 'vocal' && !t.muted && t.clips.length > 0);
-      audioState.midFilter.gain.setTargetAtTime(vocalTracks.length === 0 ? -15 : 0, audioState.ctx.currentTime, 0.04);
+    const fMap = loadJson(STORAGE_KEYS.FRIENDS, {});
+    fMap[user.username] = fMap[user.username] || [];
+    if (!fMap[user.username].some(f => f.username === fromUname)) {
+      fMap[user.username].push({ username: fromUname, name: target ? target.fromName : fromUname });
+    }
+    saveJson(STORAGE_KEYS.FRIENDS, fMap);
+    renderFriendsAndRequests();
+    renderChatSidebar();
+    notifyToast('Đã kết bạn với @' + fromUname + '!', 'success');
+  };
+
+  window.declineAuroraFriendReq = function(fromUname) {
+    const user = getCurrentUserObj();
+    const reqMap = loadJson(STORAGE_KEYS.FRIEND_REQS, {});
+    reqMap[user.username] = (reqMap[user.username] || []).filter(r => r.fromUsername !== fromUname);
+    saveJson(STORAGE_KEYS.FRIEND_REQS, reqMap);
+    renderFriendsAndRequests();
+    notifyToast('Đã từ chối lời mời kết bạn.', 'info');
+  };
+
+  // Gắn nút Kết bạn & Nhắn tin vào Profile của người dùng khác (#profileActionsOther)
+  function injectProfileOtherActions() {
+    const otherActions = document.getElementById('profileActionsOther');
+    if (!otherActions || document.getElementById('profileOtherAddFriendBtn')) return;
+
+    const addFriendBtn = document.createElement('button');
+    addFriendBtn.id = 'profileOtherAddFriendBtn';
+    addFriendBtn.type = 'button';
+    addFriendBtn.className = 'btn btn-success';
+    addFriendBtn.innerHTML = '➕ Kết bạn';
+    addFriendBtn.onclick = function() {
+      const targetUname = (document.getElementById('profileUsernameDisplay') || {}).textContent.replace(/^@/, '').trim();
+      const targetName = (document.getElementById('profileNameDisplay') || {}).textContent.trim();
+      sendAuroraFriendRequestTo(targetUname, targetName);
+    };
+
+    const msgBtn = document.createElement('button');
+    msgBtn.id = 'profileOtherSendMsgBtn';
+    msgBtn.type = 'button';
+    msgBtn.className = 'btn';
+    msgBtn.innerHTML = '💬 Nhắn tin';
+    msgBtn.onclick = function() {
+      const targetUname = (document.getElementById('profileUsernameDisplay') || {}).textContent.replace(/^@/, '').trim();
+      const targetName = (document.getElementById('profileNameDisplay') || {}).textContent.trim();
+      tryMessageUserFromProfile(targetUname, targetName);
+    };
+
+    otherActions.insertBefore(msgBtn, otherActions.firstChild);
+    otherActions.insertBefore(addFriendBtn, otherActions.firstChild);
+  }
+
+  window.openAuroraProfileWithFriendActions = function(username) {
+    const modal = document.getElementById('profileModal');
+    if (!modal) return;
+    document.getElementById('profileNameDisplay').textContent = username;
+    document.getElementById('profileUsernameDisplay').textContent = '@' + username;
+    document.getElementById('profileActionsSelf').style.display = 'none';
+    document.getElementById('profileActionsOther').style.display = 'flex';
+    modal.classList.add('show');
+  };
+
+  function sendAuroraFriendRequestTo(targetUname, targetName) {
+    if (!targetUname) return;
+    const friends = getMyFriends();
+    if (friends.some(f => f.username === targetUname)) {
+      notifyToast('Hai bạn đã là bạn bè!', 'info');
+      return;
+    }
+    const user = getCurrentUserObj();
+    const fMap = loadJson(STORAGE_KEYS.FRIENDS, {});
+    fMap[user.username] = fMap[user.username] || [];
+    fMap[user.username].push({ username: targetUname, name: targetName || targetUname });
+    saveJson(STORAGE_KEYS.FRIENDS, fMap);
+    pushAuroraNotification('friend', `Bạn đã gửi kết bạn và kết nối với @${targetUname}`);
+    notifyToast('Đã gửi lời mời kết bạn tới @' + targetUname + '!', 'success');
+  }
+
+  function tryMessageUserFromProfile(targetUname, targetName) {
+    const privMap = loadJson(STORAGE_KEYS.PRIVACY, {});
+    const targetPrivacy = privMap[targetUname] || 'all';
+    const isFriend = getMyFriends().some(f => f.username === targetUname);
+    if (targetPrivacy === 'friends' && !isFriend) {
+      notifyToast('🔒 Người dùng @' + targetUname + ' để chế độ riêng tư chỉ nhận tin nhắn từ Bạn bè. Vui lòng kết bạn trước!', 'error');
+      return;
+    }
+    const modal = document.getElementById('profileModal');
+    if (modal) modal.classList.remove('show');
+    startDirectChatWith(targetUname, targetName || targetUname);
+  }
+
+  /* ========================================================================
+     10. HỆ THỐNG THÔNG BÁO (CHUÔNG NHỎ BÊN TRÁI AVATAR)
+     ======================================================================== */
+  function getAuroraNotifications() {
+    let list = loadJson(STORAGE_KEYS.NOTIFS, null);
+    if (!Array.isArray(list)) {
+      list = [
+        { id: 'n1', category: 'admin', text: '📢 Admin đã cập nhật hệ thống Thi thử Cộng đồng và Tạo đề thông minh V4!', time: Date.now() - 600000, unread: true },
+        { id: 'n2', category: 'friend', text: '🤝 Triệu Thành Đạt (@trieu_thanh_dat) đã gửi cho bạn lời mời kết bạn.', time: Date.now() - 1800000, unread: true },
+        { id: 'n3', category: 'chat', text: '💬 Liza (Togi) đã nhắn tin cho bạn: "Chào cậu, ôn thi tốt nhé!"', time: Date.now() - 3600000, unread: true }
+      ];
+      saveJson(STORAGE_KEYS.NOTIFS, list);
+    }
+    return list;
+  }
+
+  function pushAuroraNotification(category, text) {
+    const list = getAuroraNotifications();
+    list.unshift({ id: 'n_' + Date.now(), category, text, time: Date.now(), unread: true });
+    saveJson(STORAGE_KEYS.NOTIFS, list);
+    renderAuroraNotifications('all');
+  }
+
+  window.toggleAuroraNotificationDropdown = function(e) {
+    if (e) e.stopPropagation();
+    const dd = document.getElementById('auroraNotifDropdown');
+    if (dd) dd.classList.toggle('show');
+  };
+
+  window.filterAuroraNotifs = function(cat, btn) {
+    document.querySelectorAll('.aurora-notif-tab').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    renderAuroraNotifications(cat);
+  };
+
+  window.markAllAuroraNotifsRead = function() {
+    const list = getAuroraNotifications().map(n => Object.assign({}, n, { unread: false }));
+    saveJson(STORAGE_KEYS.NOTIFS, list);
+    renderAuroraNotifications('all');
+  };
+
+  function renderAuroraNotifications(catFilter) {
+    const list = getAuroraNotifications();
+    const unreadCount = list.filter(n => n.unread).length;
+    const badge = document.getElementById('auroraNotifCountBadge');
+    if (badge) {
+      badge.textContent = unreadCount;
+      badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+    }
+    const body = document.getElementById('auroraNotifListBody');
+    if (!body) return;
+    const items = (!catFilter || catFilter === 'all') ? list : list.filter(n => n.category === catFilter);
+    body.innerHTML = items.length ? items.map(n => `
+      <div class="aurora-notif-item" style="opacity:${n.unread ? '1' : '0.7'}" onclick="handleAuroraNotifClick('${n.category}')">
+        <div>${n.text}</div>
+        <div class="aurora-notif-time">🕒 ${formatRelativeTime(n.time)} trước</div>
+      </div>
+    `).join('') : '<div style="text-align:center;color:#94a3b8;padding:18px;font-size:12px">Không có thông báo nào.</div>';
+  }
+
+  window.handleAuroraNotifClick = function(category) {
+    const dd = document.getElementById('auroraNotifDropdown');
+    if (dd) dd.classList.remove('show');
+    if (category === 'friend') {
+      switchAuroraMainView('auroraGeneralSettingsView');
+      switchAuroraSettingsTab('friends', document.querySelectorAll('#auroraSettingsTabs .student-docs-tab')[2]);
+    } else if (category === 'chat') {
+      switchAuroraMainView('auroraFriendsChatView');
+    }
+  };
+
+  /* ========================================================================
+     11. HỆ THỐNG CHAT BẠN BÈ & NHÓM NHỎ KIỂU MESSENGER (ADMIN KICK/THÊM/ĐỔI TÊN)
+     ======================================================================== */
+  let currentActiveChat = null; // { type: 'direct'|'group', id: string, name: string }
+
+  function getSmallGroups() {
+    return loadJson(STORAGE_KEYS.GROUPS, []);
+  }
+
+  function renderChatSidebar() {
+    const box = document.getElementById('auroraChatSidebarList');
+    if (!box) return;
+    const friends = getMyFriends();
+    const groups = getSmallGroups();
+
+    let html = '';
+    if (groups.length) {
+      html += `<div style="padding:6px 12px;font-size:11px;font-weight:800;color:#6f42c1;background:#f3e8ff">NHÓM NHỎ CỦA BẠN</div>`;
+      html += groups.map(g => `
+        <div class="aurora-chat-contact ${currentActiveChat && currentActiveChat.id === g.id ? 'active' : ''}" onclick="selectAuroraChatTarget('group', '${g.id}', '${g.name.replace(/'/g, '')}')">
+          <div class="aurora-chat-avatar" style="background:linear-gradient(135deg,#9333ea,#ec4899)">👥</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.name}</div>
+            <div style="font-size:11px;color:#64748b">${(g.members || []).length} thành viên • Admin: @${g.admin}</div>
+          </div>
+        </div>
+      `).join('');
     }
 
-    /**
-     * Nạp file âm thanh bất kỳ (300MB, 500MB, 1GB+) bằng ObjectURL Streaming tức thì
-     */
-    function handleUnlimitedFileLoad(file) {
-      if (!file) return;
-      ensureAudioEngine();
-      stopPlayback();
+    html += `<div style="padding:6px 12px;font-size:11px;font-weight:800;color:#0369a1;background:#e0f2fe">BẠN BÈ ĐÃ KẾT BẠN</div>`;
+    html += friends.map(f => `
+      <div class="aurora-chat-contact ${currentActiveChat && currentActiveChat.id === f.username ? 'active' : ''}" onclick="selectAuroraChatTarget('direct', '${f.username}', '${(f.name || f.username).replace(/'/g, '')}')">
+        <div class="aurora-chat-avatar">${(f.name || f.username)[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:800;font-size:13px">${f.name || f.username}</div>
+          <div style="font-size:11px;color:#16a34a">● Đang hoạt động (@${f.username})</div>
+        </div>
+      </div>
+    `).join('');
 
-      const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-      document.getElementById('streamStatus').textContent = `STREAMING: ${sizeMB} MB`;
-      document.getElementById('projectTitle').textContent = file.name;
+    box.innerHTML = html;
+  }
 
-      const streamUrl = URL.createObjectURL(file);
-      audioEl.src = streamUrl;
-      audioEl.load();
+  window.startDirectChatWith = function(username, displayName) {
+    switchAuroraMainView('auroraFriendsChatView');
+    selectAuroraChatTarget('direct', username, displayName);
+  };
 
-      audioEl.onloadedmetadata = () => {
-        audioState.hasExternalFile = true;
-        audioState.duration = audioEl.duration || 60;
+  window.selectAuroraChatTarget = function(type, id, name) {
+    currentActiveChat = { type, id, name };
+    document.getElementById('activeChatName').textContent = name;
+    document.getElementById('activeChatAvatar').textContent = type === 'group' ? '👥' : (name[0] || '💬').toUpperCase();
+    document.getElementById('activeChatSub').textContent = type === 'group'
+      ? 'Bấm vào avatar nhóm hoặc nút Cài đặt nhóm để thêm thành viên, đổi tên nhóm, quản lý thành viên'
+      : 'Trò chuyện riêng tư với @' + id;
+    document.getElementById('activeChatGroupSettingsBtn').style.display = type === 'group' ? 'inline-block' : 'none';
+    renderChatSidebar();
+    renderActiveChatMessages();
+  };
 
-        // Cập nhật tên bài nhạc vào Track Audio chính
-        const audioTrack = tracks.find(t => t.role === 'vocal') || tracks[0];
-        if (audioTrack) {
-          audioTrack.name = `Audio - ${file.name.slice(0, 14)}`;
-          audioTrack.clips = [{
-            id: 'clip_' + Date.now(),
-            name: `${file.name} (${sizeMB} MB Stream)`,
-            type: 'wave',
-            startPct: 0,
-            widthPct: 100,
-            seed: 12
-          }];
-        }
-        renderPlaylist();
-        startPlayback();
-      };
+  function renderActiveChatMessages() {
+    const area = document.getElementById('auroraChatMessagesArea');
+    if (!area || !currentActiveChat) return;
+    const allChats = loadJson(STORAGE_KEYS.CHATS, {});
+    const msgs = allChats[currentActiveChat.id] || [];
+    const user = getCurrentUserObj();
+
+    if (!msgs.length) {
+      area.innerHTML = `<div style="text-align:center;color:#94a3b8;margin:auto;font-size:13px">Hãy gửi tin nhắn đầu tiên tới <b>${currentActiveChat.name}</b>!</div>`;
+      return;
     }
 
-    /**
-     * 5. ĐIỀU KHIỂN PLAY / PAUSE / STOP & SYNTH MẶC ĐỊNH KHI CHƯA LOAD FILE
-     */
-    function startPlayback() {
-      ensureAudioEngine();
-      if (audioState.isPlaying) return;
+    area.innerHTML = msgs.map(m => {
+      const isMe = m.sender === user.username;
+      return `
+        <div class="aurora-msg-bubble ${isMe ? 'me' : 'other'}">
+          ${!isMe ? `<div style="font-size:10px;font-weight:800;margin-bottom:2px;color:#4f46e5">@${m.sender}</div>` : ''}
+          <div>${m.text}</div>
+          <div style="font-size:9px;opacity:0.75;margin-top:3px;text-align:right">${formatRelativeTime(m.time)}</div>
+        </div>
+      `;
+    }).join('');
+    area.scrollTop = area.scrollHeight;
+  }
 
-      audioState.isPlaying = true;
-      if (audioState.hasExternalFile) {
-        audioEl.play().catch(() => {});
-      } else {
-        audioState.synthStartTime = audioState.ctx.currentTime - audioState.synthPauseTime;
-        startInternalDemoSynth();
-      }
-      updatePlayIcon();
-      requestAnimationFrame(lowKeyframeLoop);
+  window.sendAuroraChatMessage = function() {
+    if (!currentActiveChat) {
+      notifyToast('Vui lòng chọn một người bạn hoặc nhóm để nhắn tin!', 'warn');
+      return;
+    }
+    const inp = document.getElementById('auroraChatInputText');
+    const txt = (inp.value || '').trim();
+    if (!txt) return;
+
+    const user = getCurrentUserObj();
+    const allChats = loadJson(STORAGE_KEYS.CHATS, {});
+    allChats[currentActiveChat.id] = allChats[currentActiveChat.id] || [];
+    allChats[currentActiveChat.id].push({
+      sender: user.username || 'me',
+      text: txt,
+      time: Date.now()
+    });
+    saveJson(STORAGE_KEYS.CHATS, allChats);
+    inp.value = '';
+    renderActiveChatMessages();
+  };
+
+  window.handleChatHeaderClick = function() {
+    if (currentActiveChat && currentActiveChat.type === 'group') {
+      openSmallGroupSettingsModal();
+    }
+  };
+
+  window.openCreateSmallGroupModal = function() {
+    const friends = getMyFriends();
+    const modal = document.getElementById('auroraSmallGroupModal');
+    document.getElementById('smallGroupModalTitle').textContent = '➕ Tạo Nhóm Chat Nhỏ';
+    document.getElementById('smallGroupModalBody').innerHTML = `
+      <label>Tên nhóm nhỏ:</label>
+      <input type="text" id="newSmallGroupName" placeholder="VD: Nhóm Ôn Thi Đại Học 12A1...">
+      <label>Chọn bạn bè để thêm vào nhóm:</label>
+      <div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:10px;margin-bottom:14px">
+        ${friends.map(f => `
+          <label style="display:flex;align-items:center;gap:8px;padding:6px 0;cursor:pointer">
+            <input type="checkbox" class="new-group-member-check" value="${f.username}" style="width:16px;height:16px">
+            <span>${f.name || f.username} (@${f.username})</span>
+          </label>
+        `).join('')}
+      </div>
+      <button type="button" class="btn btn-success" onclick="confirmCreateSmallGroup()">🚀 Tạo Nhóm Ngay</button>
+    `;
+    modal.classList.add('show');
+  };
+
+  window.confirmCreateSmallGroup = function() {
+    const name = (document.getElementById('newSmallGroupName').value || '').trim();
+    if (!name) {
+      notifyToast('Vui lòng nhập tên nhóm!', 'warn');
+      return;
+    }
+    const checked = Array.from(document.querySelectorAll('.new-group-member-check:checked')).map(c => c.value);
+    const user = getCurrentUserObj();
+    const members = Array.from(new Set([user.username || 'admin', ...checked]));
+    const groups = getSmallGroups();
+    const newGrp = {
+      id: 'grp_' + Date.now(),
+      name: name,
+      admin: user.username || 'admin',
+      members: members,
+      createdAt: Date.now()
+    };
+    groups.unshift(newGrp);
+    saveJson(STORAGE_KEYS.GROUPS, groups);
+    document.getElementById('auroraSmallGroupModal').classList.remove('show');
+    selectAuroraChatTarget('group', newGrp.id, newGrp.name);
+    notifyToast(`Đã tạo nhóm nhỏ "${name}" thành công!`, 'success');
+  };
+
+  window.openSmallGroupSettingsModal = function() {
+    if (!currentActiveChat || currentActiveChat.type !== 'group') return;
+    const groups = getSmallGroups();
+    const grp = groups.find(g => g.id === currentActiveChat.id);
+    if (!grp) return;
+
+    const user = getCurrentUserObj();
+    const isAdmin = grp.admin === (user.username || 'admin');
+    const friends = getMyFriends().filter(f => !grp.members.includes(f.username));
+
+    const modal = document.getElementById('auroraSmallGroupModal');
+    document.getElementById('smallGroupModalTitle').textContent = '⚙️ Cài Đặt Nhóm (Kiểu Messenger)';
+    document.getElementById('smallGroupModalBody').innerHTML = `
+      <label>Đổi tên nhóm:</label>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <input type="text" id="editSmallGroupNameInput" value="${grp.name}" style="margin:0;flex:1">
+        <button type="button" class="btn btn-success" style="width:auto;padding:8px 14px" onclick="renameSmallGroup('${grp.id}')">Lưu tên</button>
+      </div>
+
+      <label>Thêm bạn bè vào nhóm:</label>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <select id="addMemberToGroupSelect" style="margin:0;flex:1">
+          ${friends.length ? friends.map(f => `<option value="${f.username}">${f.name} (@${f.username})</option>`).join('') : '<option value="">Tất cả bạn bè đã ở trong nhóm</option>'}
+        </select>
+        <button type="button" class="btn" style="width:auto;padding:8px 14px" onclick="addMemberToSmallGroup('${grp.id}')">➕ Thêm</button>
+      </div>
+
+      <label>Danh sách thành viên (${grp.members.length}):</label>
+      <div style="max-height:220px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:10px;padding:8px">
+        ${grp.members.map(m => `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 8px;border-bottom:1px solid #f1f5f9">
+            <span style="font-size:13px;font-weight:700">@${m} ${m === grp.admin ? '<span style="color:#ca8a04;font-size:11px">(👑 Quản trị viên)</span>' : ''}</span>
+            ${isAdmin && m !== grp.admin ? `<button type="button" class="btn btn-danger" style="width:auto;padding:4px 10px;font-size:11px" onclick="kickMemberFromSmallGroup('${grp.id}', '${m}')">🚫 Đuổi khỏi nhóm</button>` : ''}
+          </div>
+        `).join('')}
+      </div>
+    `;
+    modal.classList.add('show');
+  };
+
+  window.renameSmallGroup = function(groupId) {
+    const newName = (document.getElementById('editSmallGroupNameInput').value || '').trim();
+    if (!newName) return;
+    const groups = getSmallGroups();
+    const grp = groups.find(g => g.id === groupId);
+    if (grp) {
+      grp.name = newName;
+      saveJson(STORAGE_KEYS.GROUPS, groups);
+      currentActiveChat.name = newName;
+      document.getElementById('activeChatName').textContent = newName;
+      renderChatSidebar();
+      notifyToast('Đã cập nhật tên nhóm!', 'success');
+    }
+  };
+
+  window.addMemberToSmallGroup = function(groupId) {
+    const sel = document.getElementById('addMemberToGroupSelect');
+    if (!sel || !sel.value) return;
+    const groups = getSmallGroups();
+    const grp = groups.find(g => g.id === groupId);
+    if (grp && !grp.members.includes(sel.value)) {
+      grp.members.push(sel.value);
+      saveJson(STORAGE_KEYS.GROUPS, groups);
+      openSmallGroupSettingsModal();
+      renderChatSidebar();
+      notifyToast('Đã thêm @' + sel.value + ' vào nhóm!', 'success');
+    }
+  };
+
+  window.kickMemberFromSmallGroup = function(groupId, memberUname) {
+    const groups = getSmallGroups();
+    const grp = groups.find(g => g.id === groupId);
+    const user = getCurrentUserObj();
+    if (!grp || grp.admin !== (user.username || 'admin')) {
+      notifyToast('Chỉ quản trị viên nhóm mới có quyền đuổi thành viên!', 'error');
+      return;
+    }
+    grp.members = grp.members.filter(m => m !== memberUname);
+    saveJson(STORAGE_KEYS.GROUPS, groups);
+    openSmallGroupSettingsModal();
+    renderChatSidebar();
+    notifyToast('Đã đuổi @' + memberUname + ' khỏi nhóm.', 'warn');
+  };
+
+  /* ========================================================================
+     KHỞI CHẠY TẤT CẢ MODULE NÂNG CẤP
+     ======================================================================== */
+  function initAuroraV2Upgrade() {
+    setupAuthBackToHomeButton();
+    injectSupremeSubjectConfig();
+    injectUniversalShareAndSubjectBar();
+    setupStudentMockExamSection();
+    unifyTeacherAndPracticeMenus();
+    injectSmartExamV4FormatSwitcher();
+    injectNavbarButtonsAndBell();
+    injectProfileOtherActions();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initAuroraV2Upgrade);
+  } else {
+    initAuroraV2Upgrade();
+  }
+  setTimeout(initAuroraV2Upgrade, 1200);
+})();
+</script>
+<!-- ================= END AURORA UPGRADE PATCH V2 ================= -->
+</template>
+
+<script>
+  let originalHtmlContent = '';
+  const fileInput = document.getElementById('sourceFileInput');
+  const mergeBtn = document.getElementById('mergeBtn');
+  const statusText = document.getElementById('statusText');
+
+  fileInput.addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(evt) {
+      originalHtmlContent = evt.target.result;
+      mergeBtn.disabled = false;
+      statusText.style.color = '#4ade80';
+      statusText.textContent = '✅ Đã đọc thành công file ' + file.name + ' (' + Math.round(file.size / 1024) + ' KB). Bấm nút bên trên để tải bản FULL!';
+    };
+    reader.readAsText(file, 'UTF-8');
+  });
+
+  function mergeAndDownload() {
+    if (!originalHtmlContent) return;
+    const patchCode = document.getElementById('auroraUpgradePatchTemplate').innerHTML;
+
+    // Xóa bản patch cũ nếu đã từng ghép trước đó để tránh trùng lặp
+    let cleanedHtml = originalHtmlContent.replace(/<!-- ================= START AURORA UPGRADE PATCH V2 ================= -->[\s\S]*?<!-- ================= END AURORA UPGRADE PATCH V2 ================= -->/g, '');
+
+    let mergedHtml = '';
+    if (cleanedHtml.lastIndexOf('</body>') !== -1) {
+      const idx = cleanedHtml.lastIndexOf('</body>');
+      mergedHtml = cleanedHtml.slice(0, idx) + '\n' + patchCode + '\n' + cleanedHtml.slice(idx);
+    } else if (cleanedHtml.lastIndexOf('</html>') !== -1) {
+      const idx = cleanedHtml.lastIndexOf('</html>');
+      mergedHtml = cleanedHtml.slice(0, idx) + '\n' + patchCode + '\n' + cleanedHtml.slice(idx);
+    } else {
+      mergedHtml = cleanedHtml + '\n' + patchCode;
     }
 
-    function pausePlayback() {
-      if (!audioState.isPlaying) return;
-      audioState.isPlaying = false;
+    const blob = new Blob([mergedHtml], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ls_full_da_nang_cap.html';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 
-      if (audioState.hasExternalFile) {
-        audioEl.pause();
-      } else {
-        audioState.synthPauseTime = getCurrentSec();
-        stopInternalDemoSynth();
-      }
-      updatePlayIcon();
-    }
-
-    function stopPlayback() {
-      audioState.isPlaying = false;
-      if (audioState.hasExternalFile) {
-        audioEl.pause();
-        audioEl.currentTime = 0;
-      } else {
-        audioState.synthPauseTime = 0;
-        stopInternalDemoSynth();
-      }
-      updatePlayheadPosition(0);
-      updatePlayIcon();
-    }
-
-    function seekToRatio(ratio) {
-      const clamped = Math.max(0, Math.min(1, ratio));
-      const targetSec = clamped * audioState.duration;
-
-      if (audioState.hasExternalFile) {
-        audioEl.currentTime = targetSec;
-      } else {
-        audioState.synthPauseTime = targetSec;
-        if (audioState.isPlaying) {
-          audioState.synthStartTime = audioState.ctx.currentTime - targetSec;
-        }
-      }
-      updatePlayheadPosition(targetSec);
-    }
-
-    function getCurrentSec() {
-      if (audioState.hasExternalFile) {
-        return audioEl.currentTime || 0;
-      }
-      if (!audioState.isPlaying || !audioState.ctx) {
-        return audioState.synthPauseTime;
-      }
-      return (audioState.ctx.currentTime - audioState.synthStartTime) % audioState.duration;
-    }
-
-    /**
-     * Bộ phát giai điệu ngầm siêu nhẹ khi người dùng chưa tải file MP3/WAV lên
-     */
-    function startInternalDemoSynth() {
-      stopInternalDemoSynth();
-      const notes = [220, 196, 174.61, 164.81]; // Am - G - F - E
-      let step = 0;
-
-      const triggerNote = () => {
-        if (!audioState.isPlaying || audioState.hasExternalFile) return;
-        const ctx = audioState.ctx;
-        const now = ctx.currentTime;
-        const freq = notes[step % notes.length];
-        step++;
-
-        // Nhánh Sub-Bass 808
-        const bassOsc = ctx.createOscillator();
-        const bassGain = ctx.createGain();
-        bassOsc.type = 'sine';
-        bassOsc.frequency.setValueAtTime(freq / 2, now);
-        bassGain.gain.setValueAtTime(0.28, now);
-        bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
-        bassOsc.connect(bassGain);
-        bassGain.connect(audioState.bassFilter);
-        bassOsc.start(now);
-        bassOsc.stop(now + 0.88);
-
-        // Nhánh Pad / Vocal ngân
-        const padOsc = ctx.createOscillator();
-        const padGain = ctx.createGain();
-        padOsc.type = 'triangle';
-        padOsc.frequency.setValueAtTime(freq * 2, now);
-        padGain.gain.setValueAtTime(0.08, now);
-        padGain.gain.exponentialRampToValueAtTime(0.001, now + 0.85);
-        padOsc.connect(padGain);
-        padGain.connect(audioState.midFilter);
-        padOsc.start(now);
-        padOsc.stop(now + 0.88);
-      };
-
-      triggerNote();
-      audioState.synthTimer = setInterval(triggerNote, 920);
-    }
-
-    function stopInternalDemoSynth() {
-      if (audioState.synthTimer) {
-        clearInterval(audioState.synthTimer);
-        audioState.synthTimer = null;
-      }
-    }
-
-    /**
-     * 6. VÒNG LẶP PLAYHEAD SIÊU NHẸ (GIỚI HẠN KEYFRAME THẤP ~20FPS CHỐNG LAG)
-     */
-    function lowKeyframeLoop(ts) {
-      if (!audioState.isPlaying) return;
-
-      if (ts - audioState.lastUiTick >= 48) {
-        audioState.lastUiTick = ts;
-        const sec = getCurrentSec();
-        updatePlayheadPosition(sec);
-        drawMiniScope();
-      }
-      requestAnimationFrame(lowKeyframeLoop);
-    }
-
-    function updatePlayheadPosition(sec) {
-      const stageW = document.getElementById('gridStage').clientWidth || 800;
-      const ratio = audioState.duration > 0 ? (sec / audioState.duration) : 0;
-      const px = ratio * stageW;
-
-      document.getElementById('playhead').style.transform = `translate3d(${px.toFixed(1)}px, 0, 0)`;
-
-      const totalSec = 71 + sec;
-      const m = Math.floor(totalSec / 60);
-      const s = Math.floor(totalSec % 60);
-      const cs = Math.floor((totalSec % 1) * 100);
-      document.getElementById('clockDisplay').textContent =
-        `${m}:${String(s).padStart(2, '0')}:${String(cs).padStart(2, '0')}`;
-    }
-
-    function drawMiniScope() {
-      const cvs = document.getElementById('miniScope');
-      if (!cvs || !audioState.analyser) return;
-      const ctx = cvs.getContext('2d');
-      const arr = new Uint8Array(audioState.analyser.frequencyBinCount);
-      audioState.analyser.getByteTimeDomainData(arr);
-
-      ctx.clearRect(0, 0, cvs.width, cvs.height);
-      ctx.strokeStyle = '#9aa6b2';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      const slice = cvs.width / arr.length;
-      for (let i = 0; i < arr.length; i++) {
-        const y = (arr[i] / 255) * cvs.height;
-        if (i === 0) ctx.moveTo(0, y);
-        else ctx.lineTo(i * slice, y);
-      }
-      ctx.stroke();
-    }
-
-    /**
-     * 7. THÊM BASS TRACK & THÊM TRACK FAKE (WAVE / MIDI / AUTO)
-     */
-    function addQuickTrackWithClip(clipTitle, clipType, seed = 8) {
-      const nextNum = tracks.length + 15;
-      const roleMap = { bass: 'bass', wave: 'vocal', midi: 'drums', notes: 'synth', auto: 'auto' };
-      const newTrack = {
-        id: 'tr_' + Date.now() + Math.floor(Math.random() * 100),
-        name: clipType === 'bass' ? `Track ${nextNum} (Bass)` : `Track ${nextNum}`,
-        role: roleMap[clipType] || 'synth',
-        muted: false,
-        vol: 0.9,
-        clips: [
-          {
-            id: 'clip_' + Date.now(),
-            name: clipTitle,
-            type: clipType,
-            startPct: 0,
-            widthPct: clipType === 'auto' ? 100 : 35,
-            seed: seed
-          }
-        ]
-      };
-      tracks.push(newTrack);
-      renderPlaylist();
-      const vp = document.getElementById('playlistViewport');
-      vp.scrollTop = vp.scrollHeight;
-    }
-
-    /**
-     * 8. TƯƠNG TÁC KÉO THẢ CLIP, CO GIÃN ĐỘ RỘNG, XÓA BẰNG CHUỘT PHẢI & ĐỔI TÊN SHIFT+CLICK
-     */
-    function setupInteractions() {
-      // Play / Stop
-      document.getElementById('btnPlay').addEventListener('click', () => {
-        if (audioState.isPlaying) pausePlayback();
-        else startPlayback();
-      });
-      document.getElementById('btnStop').addEventListener('click', stopPlayback);
-
-      window.addEventListener('keydown', (e) => {
-        if (e.code === 'Space' && e.target.tagName !== 'INPUT') {
-          e.preventDefault();
-          if (audioState.isPlaying) pausePlayback();
-          else startPlayback();
-        }
-        // Xóa Clip đang chọn bằng phím Delete / Backspace
-        if ((e.code === 'Delete' || e.code === 'Backspace') && selectedClipId && e.target.tagName !== 'INPUT') {
-          deleteClipById(selectedClipId);
-        }
-      });
-
-      // Master Volume & Bass Boost
-      document.getElementById('masterVol').addEventListener('input', (e) => {
-        if (audioState.masterGain && audioState.ctx) {
-          audioState.masterGain.gain.setTargetAtTime(parseFloat(e.target.value), audioState.ctx.currentTime, 0.02);
-        }
-      });
-      document.getElementById('bassBoostSlider').addEventListener('input', syncAudioFiltersWithTracks);
-
-      // Load file nhạc 300MB+
-      document.getElementById('audioFileInput').addEventListener('change', (e) => {
-        if (e.target.files.length > 0) handleUnlimitedFileLoad(e.target.files[0]);
-      });
-
-      // Các nút Thêm Bass & Thêm Track Fake trên Header
-      document.getElementById('btnAddBassTrack').addEventListener('click', () => {
-        addQuickTrackWithClip('Dior_Bass_Loop_80_A#_Sub', 'bass', Math.floor(Math.random() * 15) + 2);
-      });
-      document.getElementById('btnAddFakeWave').addEventListener('click', () => {
-        addQuickTrackWithClip('Fake_Audio_Stem_' + (tracks.length + 1), 'wave', Math.floor(Math.random() * 20) + 1);
-      });
-      document.getElementById('btnAddFakeMidi').addEventListener('click', () => {
-        addQuickTrackWithClip(`Pattern ${activePatternNum}`, 'notes', Math.floor(Math.random() * 10) + 1);
-      });
-      document.getElementById('btnAddFakeAuto').addEventListener('click', () => {
-        addQuickTrackWithClip('Automation_Filter_Clip', 'auto', 5);
-      });
-
-      // Tua nhạc trên thanh Ruler
-      let seeking = false;
-      const rulerArea = document.getElementById('rulerArea');
-      const doSeek = (clientX) => {
-        const rect = rulerArea.getBoundingClientRect();
-        seekToRatio((clientX - rect.left) / rect.width);
-      };
-      rulerArea.addEventListener('mousedown', (e) => { seeking = true; doSeek(e.clientX); });
-      window.addEventListener('mousemove', (e) => { if (seeking) doSeek(e.clientX); });
-      window.addEventListener('mouseup', () => { seeking = false; });
-
-      // Tương tác cột Track Headers: Mute LED, Xóa Track, Đổi tên Shift+Click, Chỉnh Vol
-      const headersEl = document.getElementById('trackHeadersContainer');
-      headersEl.addEventListener('click', (e) => {
-        const delBtn = e.target.closest('.btn-del-track');
-        if (delBtn) {
-          const id = delBtn.dataset.id;
-          tracks = tracks.filter(t => t.id !== id);
-          renderPlaylist();
-          return;
-        }
-
-        const led = e.target.closest('.led-dot');
-        if (led) {
-          const tr = tracks.find(t => t.id === led.dataset.id);
-          if (tr) {
-            tr.muted = !tr.muted;
-            renderPlaylist();
-          }
-          return;
-        }
-
-        const nameEl = e.target.closest('.track-name');
-        if (nameEl && e.shiftKey) {
-          const tr = tracks.find(t => t.id === nameEl.dataset.id);
-          if (tr) {
-            openInlineRename(nameEl, (val) => {
-              tr.name = val;
-              renderPlaylist();
-            });
-          }
-        }
-      });
-
-      headersEl.addEventListener('input', (e) => {
-        if (e.target.classList.contains('track-vol')) {
-          const tr = tracks.find(t => t.id === e.target.dataset.id);
-          if (tr) {
-            tr.vol = parseFloat(e.target.value);
-            syncAudioFiltersWithTracks();
-          }
-        }
-      });
-
-      // Đổi tên Project bằng Shift + Click
-      const projTitle = document.getElementById('projectTitle');
-      projTitle.addEventListener('click', (e) => {
-        if (e.shiftKey) {
-          openInlineRename(projTitle, (val) => { projTitle.textContent = val; });
-        }
-      });
-
-      // Tương tác trên Lưới Arrangement: Kéo Clip, Co giãn Clip, Chuột phải xóa Clip, Double-click tạo Clip
-      const lanesWrapper = document.getElementById('lanesWrapper');
-      let dragAction = null; // { mode: 'move' | 'resize', clip, sourceTrack, startX, origStart, origWidth }
-
-      lanesWrapper.addEventListener('mousedown', (e) => {
-        if (e.button === 2) return; // Bỏ qua chuột phải ở mousedown
-
-        // Shift + Click vào tiêu đề Clip để đổi tên Clip
-        const clipTitleEl = e.target.closest('.clip-title');
-        if (clipTitleEl && e.shiftKey) {
-          e.stopPropagation();
-          const cId = clipTitleEl.dataset.clipId;
-          const found = findClipAndTrack(cId);
-          if (found) {
-            openInlineRename(clipTitleEl, (val) => {
-              found.clip.name = val;
-              renderPlaylist();
-            });
-          }
-          return;
-        }
-
-        // Kiểm tra nếu bấm vào mép phải để kéo dãn độ dài Clip
-        const resizer = e.target.closest('.clip-resizer');
-        if (resizer) {
-          const found = findClipAndTrack(resizer.dataset.resizeId);
-          if (found) {
-            selectedClipId = found.clip.id;
-            dragAction = {
-              mode: 'resize',
-              clip: found.clip,
-              startX: e.clientX,
-              origWidth: found.clip.widthPct
-            };
-          }
-          return;
-        }
-
-        // Kiểm tra nếu bấm vào thân Clip để kéo di chuyển
-        const clipBox = e.target.closest('.clip-box');
-        if (clipBox) {
-          const found = findClipAndTrack(clipBox.dataset.clipId);
-          if (found) {
-            selectedClipId = found.clip.id;
-            document.querySelectorAll('.clip-box').forEach(el => el.classList.remove('selected'));
-            clipBox.classList.add('selected');
-
-            dragAction = {
-              mode: 'move',
-              clip: found.clip,
-              sourceTrack: found.track,
-              startX: e.clientX,
-              origStart: found.clip.startPct
-            };
-          }
-        } else {
-          selectedClipId = null;
-          document.querySelectorAll('.clip-box').forEach(el => el.classList.remove('selected'));
-        }
-      });
-
-      window.addEventListener('mousemove', (e) => {
-        if (!dragAction) return;
-        const stageW = document.getElementById('gridStage').clientWidth || 800;
-        const deltaPct = ((e.clientX - dragAction.startX) / stageW) * 100;
-
-        if (dragAction.mode === 'move') {
-          const newStart = Math.max(0, Math.min(100 - dragAction.clip.widthPct, dragAction.origStart + deltaPct));
-          dragAction.clip.startPct = newStart;
-          const el = document.getElementById(dragAction.clip.id);
-          if (el) el.style.left = `${newStart}%`;
-
-          // Hỗ trợ kéo nhảy Clip sang Track khác theo chiều dọc
-          const targetLane = document.elementFromPoint(e.clientX, e.clientY)?.closest('[data-track-id]');
-          if (targetLane) {
-            const targetTrackId = targetLane.dataset.trackId;
-            if (targetTrackId && targetTrackId !== dragAction.sourceTrack.id) {
-              const newTrack = tracks.find(t => t.id === targetTrackId);
-              if (newTrack) {
-                dragAction.sourceTrack.clips = dragAction.sourceTrack.clips.filter(c => c.id !== dragAction.clip.id);
-                newTrack.clips.push(dragAction.clip);
-                dragAction.sourceTrack = newTrack;
-                if (el) targetLane.appendChild(el);
-                syncAudioFiltersWithTracks();
-              }
-            }
-          }
-        } else if (dragAction.mode === 'resize') {
-          const newWidth = Math.max(4, Math.min(100 - dragAction.clip.startPct, dragAction.origWidth + deltaPct));
-          dragAction.clip.widthPct = newWidth;
-          const el = document.getElementById(dragAction.clip.id);
-          if (el) el.style.width = `${newWidth}%`;
-        }
-      });
-
-      window.addEventListener('mouseup', () => {
-        if (dragAction) {
-          const mode = dragAction.mode;
-          dragAction = null;
-          if (mode === 'resize') drawAllClipCanvases();
-        }
-      });
-
-      // Chuột phải vào Clip để xóa ngay (Chuẩn thao tác FL Studio)
-      lanesWrapper.addEventListener('contextmenu', (e) => {
-        e.preventDefault();
-        const clipBox = e.target.closest('.clip-box');
-        if (clipBox) {
-          deleteClipById(clipBox.dataset.clipId);
-        }
-      });
-
-      // Double-click vào vùng trống trên Track bất kỳ để thêm nhanh Clip vào vị trí đó
-      lanesWrapper.addEventListener('dblclick', (e) => {
-        if (e.target.closest('.clip-box')) return;
-        const lane = e.target.closest('[data-track-id]');
-        if (!lane) return;
-
-        const tr = tracks.find(t => t.id === lane.dataset.trackId);
-        if (!tr) return;
-
-        const rect = lane.getBoundingClientRect();
-        const clickPct = Math.max(0, Math.min(82, ((e.clientX - rect.left) / rect.width) * 100));
-        const isBass = tr.role === 'bass';
-
-        tr.clips.push({
-          id: 'clip_' + Date.now(),
-          name: isBass ? 'Dior_Bass_Loop_80_A#' : `Pattern ${activePatternNum}`,
-          type: isBass ? 'bass' : (tr.role === 'vocal' ? 'wave' : 'notes'),
-          startPct: clickPct,
-          widthPct: 18,
-          seed: Math.floor(Math.random() * 15) + 1
-        });
-        renderPlaylist();
-      });
-
-      window.addEventListener('resize', () => {
-        requestAnimationFrame(drawAllClipCanvases);
-      });
-    }
-
-    function findClipAndTrack(clipId) {
-      for (const tr of tracks) {
-        const cl = tr.clips.find(c => c.id === clipId);
-        if (cl) return { track: tr, clip: cl };
-      }
-      return null;
-    }
-
-    function deleteClipById(clipId) {
-      tracks.forEach(tr => {
-        tr.clips = tr.clips.filter(c => c.id !== clipId);
-      });
-      if (selectedClipId === clipId) selectedClipId = null;
-      renderPlaylist();
-    }
-
-    function openInlineRename(element, callback) {
-      const oldVal = element.textContent.trim();
-      const inp = document.createElement('input');
-      inp.type = 'text';
-      inp.value = oldVal;
-      inp.className = 'bg-[#111417] text-white border border-[#e08b2c] px-1 py-0 text-[9.5px] outline-none w-28 font-mono';
-
-      const finish = () => {
-        const v = inp.value.trim() || oldVal;
-        element.textContent = v;
-        callback(v);
-      };
-
-      inp.addEventListener('blur', finish);
-      inp.addEventListener('keydown', (ev) => {
-        if (ev.key === 'Enter') inp.blur();
-        if (ev.key === 'Escape') {
-          inp.value = oldVal;
-          inp.blur();
-        }
-      });
-
-      element.textContent = '';
-      element.appendChild(inp);
-      inp.focus();
-      inp.select();
-    }
-
-    function updatePlayIcon() {
-      const svg = document.getElementById('playSvg');
-      if (audioState.isPlaying) {
-        svg.innerHTML = '<rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>';
-      } else {
-        svg.innerHTML = '<polygon points="6 4 20 12 6 20 6 4"/>';
-      }
-    }
-  </script>
+    statusText.style.color = '#38bdf8';
+    statusText.textContent = '🎉 Đã tải xuống file "ls_full_da_nang_cap.html" hoàn chỉnh!';
+  }
+</script>
 </body>
 </html>
